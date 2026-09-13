@@ -84,12 +84,38 @@ Ver [`docs/specs/`](docs/specs/) e [`docs/plans/`](docs/plans/).
 
 ## Verificado
 
-- Navegador: login, dashboard e listagem de produtos com dados reais
+**Navegador (Supabase), com os dados reais da loja**
+
+- Login, dashboard e listagem de produtos
 - Busca por nome e código de barras, filtros de status/estoque/preço,
   ordenação por coluna e paginação
-- Dashboard e o filtro "Ativos" da listagem chegam ao mesmo número por
-  repositórios diferentes
 - Console sem erros; nenhum segredo de servidor no pacote gerado
 
-O caminho do PostgreSQL local depende de um banco com dados e ainda não foi
-exercitado.
+**Programa (Electron + PostgreSQL), contra um banco de teste**
+
+- A janela abre, detecta o modo local e exibe "Local · PostgreSQL"
+- A ponte IPC responde e os dados aparecem: dashboard e listagem
+- `NUMERIC` do PostgreSQL chega como número, não como texto — é onde os dois
+  repositórios mais poderiam divergir
+- `LEFT JOIN units` resolve a unidade, e devolve nulo quando o produto não tem
+- Busca com aspas e `DROP TABLE` não afeta o banco: os filtros são parâmetros,
+  e a ordenação vem de uma lista fechada
+- Console sem erros
+
+**Consistência entre as duas fontes**
+
+Nos dois modos, o número do cartão "Produtos ativos" e o total do filtro
+"Ativos" na listagem coincidem — repositórios diferentes, mesmo resultado.
+
+### Reproduzir o teste do modo local
+
+Sobe um PostgreSQL descartável com o mesmo formato de tabelas:
+
+```bash
+docker run -d --name easycommand-pg-teste \
+  -e POSTGRES_USER=easyfood-user -e POSTGRES_PASSWORD=teste123 \
+  -e POSTGRES_DB=easyfood -p 5442:5432 postgres:16-alpine
+```
+
+Aponte o `.env` para `PG_PORT=5442` e crie as tabelas `units`, `products`,
+`orders` e `transactions`. Depois: `npm run dev` e `npm run electron:dev`.
