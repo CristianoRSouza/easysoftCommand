@@ -27,11 +27,45 @@ function getPool() {
   return pool;
 }
 
+/**
+ * Colunas de segredo do emitente que nunca podem chegar ao renderer.
+ *
+ * No banco elas existem em duas formas: cifrada (`*_encrypted`, o que o
+ * Sync-Service grava) e em claro (herança do formato antigo). A versão em claro
+ * não serve ao painel e não deve sair do processo principal.
+ */
+const SEGREDOS_DO_EMITENTE = [
+  'aditum_tef_partner_token',
+  'aditum_tef_activation_code',
+  'apikey_easyerp',
+];
+
+/**
+ * Rede de proteção.
+ *
+ * Os repositórios listam as colunas uma a uma e nunca pedem estas — não pedir é
+ * mais forte que apagar depois. Mas `db:query` recebe SQL arbitrário, e basta
+ * um `SELECT *` futuro para o segredo vazar. A redação aqui é o que garante a
+ * invariante mesmo quando alguém esquecer.
+ */
+function redigirSegredosDoEmitente(rows) {
+  if (!Array.isArray(rows)) return rows;
+  return rows.map((row) => {
+    if (!row || typeof row !== 'object') return row;
+    const copia = { ...row };
+    for (const coluna of SEGREDOS_DO_EMITENTE) delete copia[coluna];
+    return copia;
+  });
+}
+
 // Única porta de entrada a dados no modo local. Somente leitura nesta fatia.
 ipcMain.handle('db:query', async (_event, sql, params) => {
   try {
     const result = await getPool().query(sql, params);
-    return { ok: true, rows: result.rows };
+    const rows = /\bnfce_issuer_config\b/i.test(String(sql))
+      ? redigirSegredosDoEmitente(result.rows)
+      : result.rows;
+    return { ok: true, rows };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

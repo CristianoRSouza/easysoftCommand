@@ -23,6 +23,10 @@ import type { NfceRepository } from "@/modules/nfce/application/nfce-repository"
 import { SupabaseNfceRepository } from "@/modules/nfce/infrastructure/supabase-nfce-repository";
 import { PostgresNfceRepository } from "@/modules/nfce/infrastructure/postgres-nfce-repository";
 
+import type { IssuerRepository } from "@/modules/issuer/application/issuer-repository";
+import { SupabaseIssuerRepository } from "@/modules/issuer/infrastructure/supabase-issuer-repository";
+import { PostgresIssuerRepository } from "@/modules/issuer/infrastructure/postgres-issuer-repository";
+
 import type { UnitRepository } from "@/modules/units/application/unit-repository";
 import { SupabaseUnitRepository } from "@/modules/units/infrastructure/supabase-unit-repository";
 import { PostgresUnitRepository } from "@/modules/units/infrastructure/postgres-unit-repository";
@@ -34,6 +38,7 @@ export interface Container {
   transactions: TransactionRepository;
   units: UnitRepository;
   nfce: NfceRepository;
+  issuer: IssuerRepository;
 }
 
 /**
@@ -56,6 +61,7 @@ export function createContainer(tenant: Tenant | null): Container {
       transactions: new PostgresTransactionRepository(api),
       units: new PostgresUnitRepository(api),
       nfce: new PostgresNfceRepository(api),
+      issuer: new PostgresIssuerRepository(api),
     };
   }
 
@@ -69,5 +75,6 @@ export function createContainer(tenant: Tenant | null): Container {
     transactions: new SupabaseTransactionRepository(supabase, tenant),
     units: new SupabaseUnitRepository(supabase, tenant),
     nfce: new SupabaseNfceRepository(supabase, tenant),
+    issuer: new SupabaseIssuerRepository(supabase, tenant),
   };
 }

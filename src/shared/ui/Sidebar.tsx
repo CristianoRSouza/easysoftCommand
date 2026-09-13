@@ -6,6 +6,7 @@ import {
   CreditCard,
   Ruler,
   FileText,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +38,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { to: "/produtos", label: "Produtos", icon: Package },
       { to: "/unidades", label: "Unidades", icon: Ruler },
+      { to: "/emitente", label: "Emitente NFC-e", icon: Building2 },
     ],
   },
 ];
