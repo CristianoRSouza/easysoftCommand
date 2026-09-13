@@ -1,11 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ProductRepository } from "../application/product-repository";
-import {
-  pageToRange,
-  type Product,
-  type ProductPage,
-  type ProductQuery,
-} from "../domain/product";
+import type { Product, ProductQuery } from "../domain/product";
+import { pageToRange, type Page } from "@/shared/domain/paging";
+import { asIsoDate, asNumber } from "@/shared/infrastructure/convert";
 import type { Tenant } from "@/shared/tenant/tenant";
 
 /** Colunas de `pv_products`, com a unidade resolvida por relação. */
@@ -29,18 +26,9 @@ interface Row {
   stock_quantity: number | string | null;
   image_url: string | null;
   is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
+  created_at: unknown;
+  updated_at: unknown;
   pv_product_units: { short_description: string | null } | null;
-}
-
-function toNumber(value: number | string | null): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
 }
 
 /** Converte a linha do Supabase no `Product` do domínio. */
@@ -49,13 +37,13 @@ function toProduct(row: Row): Product {
     id: row.id,
     description: row.description ?? "",
     barcode: row.barcode ?? "",
-    salePrice: toNumber(row.sale_price),
-    stockQuantity: toNumber(row.stock_quantity),
+    salePrice: asNumber(row.sale_price),
+    stockQuantity: asNumber(row.stock_quantity),
     unitName: row.pv_product_units?.short_description ?? null,
     imageUrl: row.image_url,
     isActive: row.is_active ?? false,
-    createdAt: row.created_at ?? "",
-    updatedAt: row.updated_at ?? "",
+    createdAt: asIsoDate(row.created_at),
+    updatedAt: asIsoDate(row.updated_at),
   };
 }
 
@@ -72,7 +60,7 @@ export class SupabaseProductRepository implements ProductRepository {
     private readonly tenant: Tenant,
   ) {}
 
-  async list(query: ProductQuery): Promise<ProductPage> {
+  async list(query: ProductQuery): Promise<Page<Product>> {
     const { from, to } = pageToRange(query.page, query.pageSize);
 
     let request = this.client

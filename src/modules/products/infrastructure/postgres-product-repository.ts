@@ -1,10 +1,7 @@
 import type { ProductRepository } from "../application/product-repository";
-import {
-  pageToRange,
-  type Product,
-  type ProductPage,
-  type ProductQuery,
-} from "../domain/product";
+import type { Product, ProductQuery } from "../domain/product";
+import { pageToRange, type Page } from "@/shared/domain/paging";
+import { asIsoDate, asNumber } from "@/shared/infrastructure/convert";
 import type { ElectronApi } from "@/shared/runtime/electron-api";
 
 /**
@@ -31,18 +28,9 @@ interface Row {
   unit_name: string | null;
   image_url: string | null;
   is_active: boolean | null;
-  created_at: string | null;
-  updated_at: string | null;
+  created_at: unknown;
+  updated_at: unknown;
   total: string | number;
-}
-
-function toNumber(value: string | number | null | undefined): number {
-  if (typeof value === "number") return value;
-  if (typeof value === "string") {
-    const parsed = Number(value);
-    return Number.isFinite(parsed) ? parsed : 0;
-  }
-  return 0;
 }
 
 /** Converte a linha do PostgreSQL local no `Product` do domínio. */
@@ -51,13 +39,13 @@ function toProduct(row: Row): Product {
     id: row.id,
     description: row.description ?? "",
     barcode: row.barcode ?? "",
-    salePrice: toNumber(row.sale_price),
-    stockQuantity: toNumber(row.stock_quantity),
+    salePrice: asNumber(row.sale_price),
+    stockQuantity: asNumber(row.stock_quantity),
     unitName: row.unit_name,
     imageUrl: row.image_url,
     isActive: row.is_active ?? false,
-    createdAt: row.created_at ?? "",
-    updatedAt: row.updated_at ?? "",
+    createdAt: asIsoDate(row.created_at),
+    updatedAt: asIsoDate(row.updated_at),
   };
 }
 
@@ -71,7 +59,7 @@ function toProduct(row: Row): Product {
 export class PostgresProductRepository implements ProductRepository {
   constructor(private readonly api: ElectronApi) {}
 
-  async list(query: ProductQuery): Promise<ProductPage> {
+  async list(query: ProductQuery): Promise<Page<Product>> {
     const { from } = pageToRange(query.page, query.pageSize);
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -129,7 +117,7 @@ export class PostgresProductRepository implements ProductRepository {
     return {
       items: rows.map(toProduct),
       // Sem linhas não há janela de contagem: a página está além do fim do filtro.
-      total: first ? toNumber(first.total) : 0,
+      total: first ? asNumber(first.total) : 0,
     };
   }
 }

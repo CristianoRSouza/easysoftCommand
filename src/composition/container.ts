@@ -11,9 +11,24 @@ import type { DashboardRepository } from "@/modules/dashboard/application/dashbo
 import { SupabaseDashboardRepository } from "@/modules/dashboard/infrastructure/supabase-dashboard-repository";
 import { PostgresDashboardRepository } from "@/modules/dashboard/infrastructure/postgres-dashboard-repository";
 
+import type { OrderRepository } from "@/modules/orders/application/order-repository";
+import { SupabaseOrderRepository } from "@/modules/orders/infrastructure/supabase-order-repository";
+import { PostgresOrderRepository } from "@/modules/orders/infrastructure/postgres-order-repository";
+
+import type { TransactionRepository } from "@/modules/transactions/application/transaction-repository";
+import { SupabaseTransactionRepository } from "@/modules/transactions/infrastructure/supabase-transaction-repository";
+import { PostgresTransactionRepository } from "@/modules/transactions/infrastructure/postgres-transaction-repository";
+
+import type { UnitRepository } from "@/modules/units/application/unit-repository";
+import { SupabaseUnitRepository } from "@/modules/units/infrastructure/supabase-unit-repository";
+import { PostgresUnitRepository } from "@/modules/units/infrastructure/postgres-unit-repository";
+
 export interface Container {
   products: ProductRepository;
   dashboard: DashboardRepository;
+  orders: OrderRepository;
+  transactions: TransactionRepository;
+  units: UnitRepository;
 }
 
 /**
@@ -32,6 +47,9 @@ export function createContainer(tenant: Tenant | null): Container {
     return {
       products: new PostgresProductRepository(api),
       dashboard: new PostgresDashboardRepository(api),
+      orders: new PostgresOrderRepository(api),
+      transactions: new PostgresTransactionRepository(api),
+      units: new PostgresUnitRepository(api),
     };
   }
 
@@ -41,5 +59,8 @@ export function createContainer(tenant: Tenant | null): Container {
   return {
     products: new SupabaseProductRepository(supabase, tenant),
     dashboard: new SupabaseDashboardRepository(supabase, tenant),
+    orders: new SupabaseOrderRepository(supabase, tenant),
+    transactions: new SupabaseTransactionRepository(supabase, tenant),
+    units: new SupabaseUnitRepository(supabase, tenant),
   };
 }

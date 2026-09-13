@@ -1,3 +1,5 @@
+import type { SortDirection } from "@/shared/domain/paging";
+
 /**
  * Produto — entidade de domínio.
  *
@@ -29,7 +31,6 @@ export type ProductSortKey =
   | "salePrice"
   | "stockQuantity"
   | "isActive";
-export type SortDirection = "asc" | "desc";
 
 /** Critérios de consulta. `page` começa em 1. */
 export interface ProductQuery {
@@ -44,12 +45,6 @@ export interface ProductQuery {
   pageSize: number;
 }
 
-/** Uma página de resultados. `total` é a contagem do filtro inteiro, não da página. */
-export interface ProductPage {
-  items: Product[];
-  total: number;
-}
-
 export const DEFAULT_PRODUCT_QUERY: ProductQuery = {
   search: "",
   activeFilter: "all",
@@ -61,11 +56,3 @@ export const DEFAULT_PRODUCT_QUERY: ProductQuery = {
   page: 1,
   pageSize: 50,
 };
-
-/** Converte página (base 1) no intervalo de índices que os repositórios usam. */
-export function pageToRange(page: number, pageSize: number): { from: number; to: number } {
-  const safePage = Math.max(1, Math.floor(page));
-  const safeSize = Math.max(1, Math.floor(pageSize));
-  const from = (safePage - 1) * safeSize;
-  return { from, to: from + safeSize - 1 };
-}

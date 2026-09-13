@@ -1,4 +1,5 @@
-import type { ProductPage, ProductQuery } from "../domain/product";
+import type { Page } from "@/shared/domain/paging";
+import type { Product, ProductQuery } from "../domain/product";
 import type { ProductRepository } from "./product-repository";
 
 /**
@@ -9,5 +10,5 @@ import type { ProductRepository } from "./product-repository";
  * `if (isElectron())` do projeto anterior.
  */
 export function listProducts(repository: ProductRepository) {
-  return (query: ProductQuery): Promise<ProductPage> => repository.list(query);
+  return (query: ProductQuery): Promise<Page<Product>> => repository.list(query);
 }
