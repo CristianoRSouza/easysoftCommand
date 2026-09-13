@@ -9,8 +9,8 @@ export function RequireSession({ children }: { children: ReactNode }) {
   if (!requiresLogin) return <>{children}</>;
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-ink-muted">
-        Carregando…
+      <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+        Carregando...
       </div>
     );
   }

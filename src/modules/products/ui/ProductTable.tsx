@@ -1,5 +1,6 @@
 import type { Product, ProductQuery, ProductSortKey } from "../domain/product";
-import { formatCurrency } from "@/shared/ui/format";
+import { formatCurrency, formatQuantity } from "@/shared/ui/format";
+import { Badge, Empty, Panel, SortableHeader } from "@/shared/ui/primitives";
 
 interface Props {
   items: Product[];
@@ -7,64 +8,52 @@ interface Props {
   onSort: (key: ProductSortKey) => void;
 }
 
-const COLUMNS: { key: ProductSortKey; label: string; align?: "right" }[] = [
-  { key: "description", label: "Produto" },
-  { key: "barcode", label: "Código de barras" },
-  { key: "salePrice", label: "Preço", align: "right" },
-  { key: "stockQuantity", label: "Estoque", align: "right" },
-  { key: "isActive", label: "Status" },
-];
-
 export function ProductTable({ items, query, onSort }: Props) {
   if (items.length === 0) {
-    return (
-      <p className="rounded-xl border border-base-border bg-base-raised px-4 py-10 text-center text-sm text-ink-muted">
-        Nenhum produto encontrado com os filtros atuais.
-      </p>
-    );
+    return <Empty label="Nenhum produto encontrado com os filtros atuais." />;
   }
 
+  const header = { activeKey: query.sortKey, direction: query.sortDirection, onSort };
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-base-border">
+    <Panel className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead className="bg-base-raised text-ink-muted">
+        <thead className="border-b border-border/60 text-muted-foreground">
           <tr>
-            {COLUMNS.map(({ key, label, align }) => (
-              <th
-                key={key}
-                onClick={() => onSort(key)}
-                className={`cursor-pointer select-none px-4 py-3 font-medium transition hover:text-ink ${
-                  align === "right" ? "text-right" : "text-left"
-                }`}
-              >
-                {label}
-                {query.sortKey === key && (query.sortDirection === "asc" ? " ↑" : " ↓")}
-              </th>
-            ))}
+            <SortableHeader column="description" label="Produto" {...header} />
+            <SortableHeader column="barcode" label="Código de barras" {...header} />
+            <SortableHeader column="salePrice" label="Preço" align="right" {...header} />
+            <SortableHeader column="stockQuantity" label="Estoque" align="right" {...header} />
+            <SortableHeader column="isActive" label="Status" {...header} />
             <th className="px-4 py-3 text-left font-medium">Unidade</th>
           </tr>
         </thead>
         <tbody>
           {items.map((product) => (
-            <tr key={product.id} className="border-t border-base-border">
-              <td className="px-4 py-3">{product.description}</td>
-              <td className="px-4 py-3 font-mono text-xs text-ink-muted">{product.barcode}</td>
-              <td className="px-4 py-3 text-right">{formatCurrency(product.salePrice)}</td>
-              <td className="px-4 py-3 text-right">{product.stockQuantity}</td>
-              <td className="px-4 py-3">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${
-                    product.isActive ? "bg-ok/15 text-ok" : "bg-danger/15 text-danger"
-                  }`}
-                >
-                  {product.isActive ? "Ativo" : "Inativo"}
-                </span>
+            <tr
+              key={product.id}
+              className="border-t border-border/40 transition-colors hover:bg-secondary/40"
+            >
+              <td className="px-4 py-3">{product.description || "—"}</td>
+              <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
+                {product.barcode || "—"}
               </td>
-              <td className="px-4 py-3 text-ink-muted">{product.unitName ?? "—"}</td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {formatCurrency(product.salePrice)}
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {formatQuantity(product.stockQuantity)}
+              </td>
+              <td className="px-4 py-3">
+                <Badge tone={product.isActive ? "success" : "destructive"}>
+                  {product.isActive ? "Ativo" : "Inativo"}
+                </Badge>
+              </td>
+              <td className="px-4 py-3 text-muted-foreground">{product.unitName ?? "—"}</td>
             </tr>
           ))}
         </tbody>
       </table>
-    </div>
+    </Panel>
   );
 }

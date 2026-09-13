@@ -31,15 +31,19 @@ export function ContainerProvider({ children }: { children: ReactNode }) {
   }, [tenant, loading, error]);
 
   if (result === null) {
-    return <Centered><p className="text-ink-muted">Carregando…</p></Centered>;
+    return (
+      <Centered>
+        <p className="text-muted-foreground">Carregando...</p>
+      </Centered>
+    );
   }
 
   if ("error" in result) {
     return (
       <Centered>
-        <div className="max-w-md rounded-xl border border-danger/40 bg-danger/10 px-5 py-4 text-center">
-          <p className="font-medium text-danger">Não foi possível carregar os dados</p>
-          <p className="mt-1 text-sm text-ink-muted">{result.error}</p>
+        <div className="glass-panel max-w-md rounded-lg border-destructive/40 bg-destructive/10 px-5 py-4 text-center shadow-elegant">
+          <p className="font-medium text-destructive">Não foi possível carregar os dados</p>
+          <p className="mt-1 text-sm text-muted-foreground">{result.error}</p>
         </div>
       </Centered>
     );

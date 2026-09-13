@@ -1,8 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useSession } from "./auth-context";
-
-const FIELD =
-  "w-full rounded-lg border border-base-border bg-base px-3 py-2 outline-none focus:border-accent";
+import { FIELD } from "@/shared/ui/primitives";
 
 export function LoginPage() {
   const { signIn } = useSession();
@@ -28,45 +26,47 @@ export function LoginPage() {
     <div className="flex min-h-screen items-center justify-center px-4">
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-sm space-y-5 rounded-xl border border-base-border bg-base-raised p-8"
+        className="glass-panel w-full max-w-sm space-y-5 rounded-lg p-8 shadow-elegant"
       >
         <div>
-          <h1 className="text-xl font-semibold">EasyCommand</h1>
-          <p className="mt-1 text-sm text-ink-muted">Acesse para gerenciar a loja.</p>
+          <h1 className="font-heading text-xl font-bold tracking-tight">
+            Easy<span className="text-primary">Command</span>
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">Acesse para gerenciar a loja.</p>
         </div>
 
         <label className="block space-y-1.5">
-          <span className="text-sm text-ink-muted">E-mail</span>
+          <span className="text-sm text-muted-foreground">E-mail</span>
           <input
             type="email"
             required
             autoComplete="username"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className={FIELD}
+            className={`${FIELD} w-full`}
           />
         </label>
 
         <label className="block space-y-1.5">
-          <span className="text-sm text-ink-muted">Senha</span>
+          <span className="text-sm text-muted-foreground">Senha</span>
           <input
             type="password"
             required
             autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className={FIELD}
+            className={`${FIELD} w-full`}
           />
         </label>
 
-        {error && <p className="text-sm text-danger">{error}</p>}
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
         <button
           type="submit"
           disabled={submitting}
-          className="w-full rounded-lg bg-accent py-2 font-medium text-white transition hover:bg-accent-hover disabled:opacity-60"
+          className="w-full rounded-lg bg-gradient-primary py-2 font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
         >
-          {submitting ? "Entrando…" : "Entrar"}
+          {submitting ? "Entrando..." : "Entrar"}
         </button>
       </form>
     </div>

@@ -1,16 +1,81 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * As cores vêm de variáveis CSS em `src/index.css`, não de valores literais
+ * aqui. É o que permite o design existir num lugar só — e é o mesmo arranjo do
+ * projeto anterior, para que a aparência seja idêntica.
+ */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
       colors: {
-        base: { DEFAULT: "#0B1220", raised: "#111A2C", border: "#1E2A44" },
-        ink: { DEFAULT: "#E6EDF7", muted: "#8A9AB5" },
-        accent: { DEFAULT: "#3B82F6", hover: "#2563EB" },
-        ok: "#10B981",
-        warn: "#F59E0B",
-        danger: "#EF4444",
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+          glow: "hsl(var(--primary-glow))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        success: {
+          DEFAULT: "hsl(var(--success))",
+          foreground: "hsl(var(--success-foreground))",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--warning))",
+          foreground: "hsl(var(--warning-foreground))",
+        },
+        info: {
+          DEFAULT: "hsl(var(--info))",
+          foreground: "hsl(var(--info-foreground))",
+        },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+        },
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      fontFamily: {
+        heading: ["Sora", "Manrope", "system-ui", "sans-serif"],
+        sans: ["Manrope", "system-ui", "sans-serif"],
+        mono: ["ui-monospace", "JetBrains Mono", "monospace"],
       },
     },
   },
