@@ -5,6 +5,7 @@ import {
   ClipboardList,
   CreditCard,
   Ruler,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { to: "/comandas", label: "Comandas", icon: ClipboardList },
       { to: "/transacoes", label: "Transações", icon: CreditCard },
+      { to: "/nfce", label: "NFC-e", icon: FileText },
     ],
   },
   {

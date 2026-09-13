@@ -10,6 +10,7 @@ import { ProductsPage } from "@/modules/products/ui/ProductsPage";
 import { OrdersPage } from "@/modules/orders/ui/OrdersPage";
 import { TransactionsPage } from "@/modules/transactions/ui/TransactionsPage";
 import { UnitsPage } from "@/modules/units/ui/UnitsPage";
+import { NfcePage } from "@/modules/nfce/ui/NfcePage";
 
 // `staleTime` evita refazer a consulta a cada foco de janela — num painel
 // administrativo os dados não mudam de segundo a segundo.
@@ -36,6 +37,7 @@ export default function App() {
                     <Route index element={<DashboardPage />} />
                     <Route path="comandas" element={<OrdersPage />} />
                     <Route path="transacoes" element={<TransactionsPage />} />
+                    <Route path="nfce" element={<NfcePage />} />
                     <Route path="produtos" element={<ProductsPage />} />
                     <Route path="unidades" element={<UnitsPage />} />
                   </Route>
