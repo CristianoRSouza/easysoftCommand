@@ -1,5 +1,6 @@
 import type { Page } from "@/shared/domain/paging";
 import type { NfceNote, NfceQuery, NfceTotals } from "../domain/nfce-note";
+import type { NfceDetail } from "../domain/nfce-detail";
 
 /**
  * Porta de acesso às notas fiscais.
@@ -12,4 +13,6 @@ import type { NfceNote, NfceQuery, NfceTotals } from "../domain/nfce-note";
 export interface NfceRepository {
   list(query: NfceQuery): Promise<Page<NfceNote>>;
   totals(query: NfceQuery): Promise<NfceTotals>;
+  /** `null` quando a nota não existe ou não pertence à loja em uso. */
+  detail(noteId: string): Promise<NfceDetail | null>;
 }

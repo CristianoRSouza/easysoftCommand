@@ -15,6 +15,17 @@ import {
 } from "@/shared/domain/paging";
 import type { Tenant } from "@/shared/tenant/tenant";
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
+import type { NfceDetail } from "../domain/nfce-detail";
+import {
+  sortHistory,
+  toEventEntry,
+  toIssuer,
+  toItem,
+  toLogEntry,
+  toPayment,
+  toRecipient,
+  toTotals,
+} from "./nfce-detail-mapper";
 
 const COLUMNS =
   "id, number, serie, access_key, status, total_value, issued_at, authorized_at, authorization_protocol, sefaz_status_code, sefaz_status_reason, emission_type, reconcile_status, retry_count";
@@ -135,5 +146,53 @@ export class SupabaseNfceRepository implements NfceRepository {
     }
 
     return { count, byStatus, authorizedAmount };
+  }
+
+  /**
+   * Monta o detalhe a partir das views que compõem a nota.
+   *
+   * A nota é buscada com o filtro de loja; as partes, por `note_id`. Se a nota
+   * não pertence à loja em uso, a primeira consulta devolve vazio e nada mais
+   * é lido — o isolamento não depende das consultas seguintes.
+   */
+  async detail(noteId: string): Promise<NfceDetail | null> {
+    const { data: noteRow, error } = await this.client
+      .from("vw_nfce_notes")
+      .select("*")
+      .eq("store_id", this.tenant.storeId)
+      .eq("id", noteId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Falha ao carregar a nota: ${error.message}`);
+    if (!noteRow) return null;
+
+    const porNota = (view: string) =>
+      this.client.from(view).select("*").eq("note_id", noteId);
+
+    const [issuer, recipient, items, payments, logs, events] = await Promise.all([
+      porNota("vw_nfce_issuer").maybeSingle(),
+      porNota("vw_nfce_recipient").maybeSingle(),
+      porNota("vw_nfce_items"),
+      porNota("vw_nfce_payments"),
+      porNota("vw_nfce_logs"),
+      porNota("vw_nfce_events"),
+    ]);
+
+    const linhas = (res: { data: unknown }) => (res.data ?? []) as Record<string, unknown>[];
+    const nota = noteRow as Record<string, unknown>;
+
+    return {
+      note: toNote(nota),
+      issuer: toIssuer((issuer.data ?? {}) as Record<string, unknown>),
+      recipient: toRecipient(recipient.data as Record<string, unknown> | null),
+      totals: toTotals(nota),
+      items: linhas(items).map(toItem).sort((a, b) => a.sequence - b.sequence),
+      payments: linhas(payments).map(toPayment).sort((a, b) => a.sequence - b.sequence),
+      history: sortHistory([
+        ...linhas(logs).map(toLogEntry),
+        ...linhas(events).map(toEventEntry),
+      ]),
+      authorizedXml: asText(nota.authorized_xml),
+    };
   }
 }

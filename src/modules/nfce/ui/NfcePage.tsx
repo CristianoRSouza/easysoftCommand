@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import {
   DEFAULT_NFCE_QUERY,
   NFCE_STATUS_LABEL,
@@ -63,6 +64,7 @@ function SummaryCard({
 
 export function NfcePage() {
   const { nfce } = useContainer();
+  const navigate = useNavigate();
   const [query, setQuery] = useState<NfceQuery>(DEFAULT_NFCE_QUERY);
 
   const lista = useQuery<Page<NfceNote>>({
@@ -186,7 +188,8 @@ export function NfcePage() {
               {lista.data?.items.map((note) => (
                 <tr
                   key={note.id}
-                  className={`border-t border-border/40 transition-colors hover:bg-secondary/40 ${
+                  onClick={() => navigate(`/nfce/${note.id}`)}
+                  className={`cursor-pointer border-t border-border/40 transition-colors hover:bg-secondary/40 ${
                     needsAttention(note.status) ? "bg-warning/5" : ""
                   }`}
                 >

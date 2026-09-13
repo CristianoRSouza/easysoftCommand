@@ -13,6 +13,17 @@ import {
 } from "@/shared/domain/paging";
 import type { ElectronApi } from "@/shared/runtime/electron-api";
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
+import type { NfceDetail } from "../domain/nfce-detail";
+import {
+  sortHistory,
+  toEventEntry,
+  toIssuer,
+  toItem,
+  toLogEntry,
+  toPayment,
+  toRecipient,
+  toTotals,
+} from "./nfce-detail-mapper";
 
 function toNote(row: Record<string, unknown>): NfceNote {
   return {
@@ -142,5 +153,50 @@ export class PostgresNfceRepository implements NfceRepository {
     }
 
     return { count, byStatus, authorizedAmount };
+  }
+
+  /**
+   * Monta o detalhe a partir das tabelas que compõem a nota.
+   *
+   * São seis consultas em vez de um JOIN gigante: itens, pagamentos, registros
+   * e eventos têm cardinalidades diferentes, e juntá-los numa consulta só
+   * multiplicaria as linhas — o erro clássico que faz um pagamento aparecer
+   * uma vez por item.
+   */
+  async detail(noteId: string): Promise<NfceDetail | null> {
+    const notas = await this.api.query<Record<string, unknown>>(
+      "SELECT * FROM nfce_notes WHERE id = $1",
+      [noteId],
+    );
+    if (!notas.ok) throw new Error(`Falha ao carregar a nota: ${notas.error}`);
+
+    const nota = notas.rows[0];
+    if (!nota) return null;
+
+    const porNota = async (sql: string) => {
+      const resultado = await this.api.query<Record<string, unknown>>(sql, [noteId]);
+      if (!resultado.ok) throw new Error(`Falha ao carregar a nota: ${resultado.error}`);
+      return resultado.rows;
+    };
+
+    const [issuer, recipient, items, payments, logs, events] = await Promise.all([
+      porNota("SELECT * FROM nfce_issuer WHERE note_id = $1"),
+      porNota("SELECT * FROM nfce_recipient WHERE note_id = $1"),
+      porNota("SELECT * FROM nfce_items WHERE note_id = $1 ORDER BY item_number"),
+      porNota("SELECT * FROM nfce_payments WHERE note_id = $1 ORDER BY sequence"),
+      porNota("SELECT * FROM nfce_logs WHERE note_id = $1 ORDER BY created_at DESC"),
+      porNota("SELECT * FROM nfce_events WHERE note_id = $1 ORDER BY event_at DESC"),
+    ]);
+
+    return {
+      note: toNote(nota),
+      issuer: toIssuer(issuer[0] ?? {}),
+      recipient: toRecipient(recipient[0]),
+      totals: toTotals(nota),
+      items: items.map(toItem),
+      payments: payments.map(toPayment),
+      history: sortHistory([...logs.map(toLogEntry), ...events.map(toEventEntry)]),
+      authorizedXml: asText(nota.authorized_xml),
+    };
   }
 }
