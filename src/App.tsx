@@ -13,6 +13,10 @@ import { UnitsPage } from "@/modules/units/ui/UnitsPage";
 import { NfcePage } from "@/modules/nfce/ui/NfcePage";
 import { NfceDetailPage } from "@/modules/nfce/ui/NfceDetailPage";
 import { IssuerPage } from "@/modules/issuer/ui/IssuerPage";
+import { TotemsPage } from "@/modules/totems/ui/TotemsPage";
+import { SyncPage } from "@/modules/sync/ui/SyncPage";
+import { RevenuePage } from "@/modules/revenue/ui/RevenuePage";
+import { AuditPage } from "@/modules/audit/ui/AuditPage";
 
 // `staleTime` evita refazer a consulta a cada foco de janela — num painel
 // administrativo os dados não mudam de segundo a segundo.
@@ -44,6 +48,10 @@ export default function App() {
                     <Route path="produtos" element={<ProductsPage />} />
                     <Route path="unidades" element={<UnitsPage />} />
                     <Route path="emitente" element={<IssuerPage />} />
+                    <Route path="receitas" element={<RevenuePage />} />
+                    <Route path="totens" element={<TotemsPage />} />
+                    <Route path="sincronizacao" element={<SyncPage />} />
+                    <Route path="auditoria" element={<AuditPage />} />
                   </Route>
                 </Routes>
               </HashRouter>

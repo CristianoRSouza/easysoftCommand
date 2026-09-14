@@ -28,16 +28,27 @@ function getPool() {
 }
 
 /**
- * Colunas de segredo do emitente que nunca podem chegar ao renderer.
+ * Colunas de segredo que nunca podem chegar ao renderer.
  *
  * No banco elas existem em duas formas: cifrada (`*_encrypted`, o que o
  * Sync-Service grava) e em claro (herança do formato antigo). A versão em claro
  * não serve ao painel e não deve sair do processo principal.
+ *
+ * A lista é de COLUNAS, não de tabelas, e é conferida em toda consulta. Filtrar
+ * por tabela obriga a lembrar de cada uma que guarda segredo — e esquecer uma é
+ * fácil: o emitente estava protegido, o totem não estava, e os dois guardam
+ * token da Aditum em claro.
  */
-const SEGREDOS_DO_EMITENTE = [
+const COLUNAS_SECRETAS = [
   'aditum_tef_partner_token',
   'aditum_tef_activation_code',
+  'aditum_partner_token',
+  'aditum_activation_code',
   'apikey_easyerp',
+  'nfce_service_api_key',
+  'tef_http_api_key',
+  'pix_http_api_key',
+  'certificate_password',
 ];
 
 /**
@@ -47,14 +58,22 @@ const SEGREDOS_DO_EMITENTE = [
  * mais forte que apagar depois. Mas `db:query` recebe SQL arbitrário, e basta
  * um `SELECT *` futuro para o segredo vazar. A redação aqui é o que garante a
  * invariante mesmo quando alguém esquecer.
+ *
+ * As variantes `*_encrypted` passam de propósito: são cifradas, e o painel
+ * precisa delas para saber se a integração está configurada.
  */
-function redigirSegredosDoEmitente(rows) {
-  if (!Array.isArray(rows)) return rows;
+function redigirSegredos(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return rows;
   return rows.map((row) => {
     if (!row || typeof row !== 'object') return row;
-    const copia = { ...row };
-    for (const coluna of SEGREDOS_DO_EMITENTE) delete copia[coluna];
-    return copia;
+    let copia = null;
+    for (const coluna of COLUNAS_SECRETAS) {
+      if (coluna in row) {
+        copia = copia ?? { ...row };
+        delete copia[coluna];
+      }
+    }
+    return copia ?? row;
   });
 }
 
@@ -62,10 +81,7 @@ function redigirSegredosDoEmitente(rows) {
 ipcMain.handle('db:query', async (_event, sql, params) => {
   try {
     const result = await getPool().query(sql, params);
-    const rows = /\bnfce_issuer_config\b/i.test(String(sql))
-      ? redigirSegredosDoEmitente(result.rows)
-      : result.rows;
-    return { ok: true, rows };
+    return { ok: true, rows: redigirSegredos(result.rows) };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }

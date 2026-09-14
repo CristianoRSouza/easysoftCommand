@@ -27,6 +27,22 @@ import type { IssuerRepository } from "@/modules/issuer/application/issuer-repos
 import { SupabaseIssuerRepository } from "@/modules/issuer/infrastructure/supabase-issuer-repository";
 import { PostgresIssuerRepository } from "@/modules/issuer/infrastructure/postgres-issuer-repository";
 
+import type { TotemRepository } from "@/modules/totems/application/totem-repository";
+import { SupabaseTotemRepository } from "@/modules/totems/infrastructure/supabase-totem-repository";
+import { PostgresTotemRepository } from "@/modules/totems/infrastructure/postgres-totem-repository";
+
+import type { SyncRepository } from "@/modules/sync/application/sync-repository";
+import { SupabaseSyncRepository } from "@/modules/sync/infrastructure/supabase-sync-repository";
+import { PostgresSyncRepository } from "@/modules/sync/infrastructure/postgres-sync-repository";
+
+import type { RevenueRepository } from "@/modules/revenue/application/revenue-repository";
+import { SupabaseRevenueRepository } from "@/modules/revenue/infrastructure/supabase-revenue-repository";
+import { PostgresRevenueRepository } from "@/modules/revenue/infrastructure/postgres-revenue-repository";
+
+import type { AuditRepository } from "@/modules/audit/application/audit-repository";
+import { SupabaseAuditRepository } from "@/modules/audit/infrastructure/supabase-audit-repository";
+import { PostgresAuditRepository } from "@/modules/audit/infrastructure/postgres-audit-repository";
+
 import type { UnitRepository } from "@/modules/units/application/unit-repository";
 import { SupabaseUnitRepository } from "@/modules/units/infrastructure/supabase-unit-repository";
 import { PostgresUnitRepository } from "@/modules/units/infrastructure/postgres-unit-repository";
@@ -39,6 +55,10 @@ export interface Container {
   units: UnitRepository;
   nfce: NfceRepository;
   issuer: IssuerRepository;
+  totems: TotemRepository;
+  sync: SyncRepository;
+  revenue: RevenueRepository;
+  audit: AuditRepository;
 }
 
 /**
@@ -62,6 +82,10 @@ export function createContainer(tenant: Tenant | null): Container {
       units: new PostgresUnitRepository(api),
       nfce: new PostgresNfceRepository(api),
       issuer: new PostgresIssuerRepository(api),
+      totems: new PostgresTotemRepository(api),
+      sync: new PostgresSyncRepository(api),
+      revenue: new PostgresRevenueRepository(api),
+      audit: new PostgresAuditRepository(api),
     };
   }
 
@@ -76,5 +100,9 @@ export function createContainer(tenant: Tenant | null): Container {
     units: new SupabaseUnitRepository(supabase, tenant),
     nfce: new SupabaseNfceRepository(supabase, tenant),
     issuer: new SupabaseIssuerRepository(supabase, tenant),
+    totems: new SupabaseTotemRepository(supabase, tenant),
+    sync: new SupabaseSyncRepository(),
+    revenue: new SupabaseRevenueRepository(supabase, tenant),
+    audit: new SupabaseAuditRepository(supabase, tenant),
   };
 }

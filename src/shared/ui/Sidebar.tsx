@@ -7,6 +7,10 @@ import {
   Ruler,
   FileText,
   Building2,
+  TrendingUp,
+  Monitor,
+  RefreshCw,
+  ScrollText,
   type LucideIcon,
 } from "lucide-react";
 
@@ -23,7 +27,10 @@ interface Item {
 const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: "Visão Geral",
-    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard }],
+    items: [
+      { to: "/", label: "Dashboard", icon: LayoutDashboard },
+      { to: "/receitas", label: "Receitas", icon: TrendingUp },
+    ],
   },
   {
     title: "Operação",
@@ -39,6 +46,14 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { to: "/produtos", label: "Produtos", icon: Package },
       { to: "/unidades", label: "Unidades", icon: Ruler },
       { to: "/emitente", label: "Emitente NFC-e", icon: Building2 },
+    ],
+  },
+  {
+    title: "Infra / Serviços",
+    items: [
+      { to: "/totens", label: "Totens", icon: Monitor },
+      { to: "/sincronizacao", label: "Sincronização", icon: RefreshCw },
+      { to: "/auditoria", label: "Auditoria", icon: ScrollText },
     ],
   },
 ];
