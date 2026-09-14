@@ -79,13 +79,67 @@ function redigirSegredos(rows) {
   });
 }
 
-// Única porta de entrada a dados no modo local. Somente leitura nesta fatia.
+function mensagemDe(error) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Leitura. Somente leitura de verdade.
+ *
+ * A consulta roda dentro de uma transação READ ONLY, então é o próprio
+ * PostgreSQL que recusa INSERT, UPDATE, DELETE e DDL. Antes disso o canal
+ * aceitava escrita — o "somente leitura" era um comentário, não uma barreira,
+ * e um teste confirmou que um INSERT passava.
+ *
+ * A alternativa seria inspecionar o texto do SQL, mas isso é adivinhação:
+ * comentários, CTEs e `;` encadeado derrubam qualquer regra de texto. Deixar o
+ * banco decidir não tem como ser contornado.
+ */
 ipcMain.handle('db:query', async (_event, sql, params) => {
+  const client = await getPool().connect();
   try {
-    const result = await getPool().query(sql, params);
+    await client.query('BEGIN TRANSACTION READ ONLY');
+    const result = await client.query(sql, params);
+    await client.query('COMMIT');
     return { ok: true, rows: redigirSegredos(result.rows) };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+    await client.query('ROLLBACK').catch(() => {});
+    return { ok: false, error: mensagemDe(error) };
+  } finally {
+    client.release();
+  }
+});
+
+/**
+ * Escrita. Canal separado, e sempre em transação.
+ *
+ * Recebe uma lista de comandos aplicados juntos: ou todos valem, ou nenhum. Um
+ * único comando é o caso comum, mas a correção de uma NFC-e altera a nota e os
+ * itens ao mesmo tempo — gravar metade disso é pior que não gravar.
+ *
+ * A separação em dois canais é o que torna a leitura auditável: qualquer código
+ * que pretenda alterar dados precisa pedir por aqui, explicitamente.
+ */
+ipcMain.handle('db:execute', async (_event, statements) => {
+  if (!Array.isArray(statements) || statements.length === 0) {
+    return { ok: false, error: 'Nenhum comando para executar.' };
+  }
+
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const rowCounts = [];
+    for (const statement of statements) {
+      const result = await client.query(statement.sql, statement.params ?? []);
+      rowCounts.push(result.rowCount ?? 0);
+    }
+    await client.query('COMMIT');
+    return { ok: true, rowCounts };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    return { ok: false, error: mensagemDe(error) };
+  } finally {
+    client.release();
   }
 });
 

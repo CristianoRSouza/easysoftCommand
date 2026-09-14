@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
+import { UnitDialog } from "./UnitDialog";
 import { DEFAULT_UNIT_QUERY, type Unit, type UnitQuery } from "../domain/unit";
 import { useContainer } from "@/shared/container/container-context";
 import {
@@ -16,6 +17,7 @@ import {
 export function UnitsPage() {
   const { units } = useContainer();
   const [query, setQuery] = useState<UnitQuery>(DEFAULT_UNIT_QUERY);
+  const [editando, setEditando] = useState<Unit | null>(null);
 
   const { data, isPending, error } = useQuery<Unit[]>({
     queryKey: ["units", query],
@@ -58,6 +60,7 @@ export function UnitsPage() {
                 <th className="px-4 py-3 text-left font-medium">Descrição</th>
                 <th className="px-4 py-3 text-left font-medium">Fracionada</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="w-12 px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -83,12 +86,23 @@ export function UnitsPage() {
                       {unit.isActive ? "Ativa" : "Inativa"}
                     </Badge>
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => setEditando(unit)}
+                      className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                      title={`Editar ${unit.shortDescription}`}
+                    >
+                      <Pencil size={15} />
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </Panel>
       )}
+
+      {editando && <UnitDialog unit={editando} onClose={() => setEditando(null)} />}
     </div>
   );
 }
