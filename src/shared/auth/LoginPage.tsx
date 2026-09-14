@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { RecoverPasswordPage } from "./RecoverPasswordPage";
 import { useSession } from "./auth-context";
 import { FIELD } from "@/shared/ui/primitives";
 
@@ -8,6 +9,7 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [recuperando, setRecuperando] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -21,6 +23,8 @@ export function LoginPage() {
       setSubmitting(false);
     }
   }
+
+  if (recuperando) return <RecoverPasswordPage onBack={() => setRecuperando(false)} />;
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
@@ -48,7 +52,16 @@ export function LoginPage() {
         </label>
 
         <label className="block space-y-1.5">
-          <span className="text-sm text-muted-foreground">Senha</span>
+          <span className="flex items-baseline justify-between">
+            <span className="text-sm text-muted-foreground">Senha</span>
+            <button
+              type="button"
+              onClick={() => setRecuperando(true)}
+              className="text-xs text-primary hover:underline"
+            >
+              Esqueci a senha
+            </button>
+          </span>
           <input
             type="password"
             required

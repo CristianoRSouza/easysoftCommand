@@ -1,5 +1,11 @@
 import type { Page } from "@/shared/domain/paging";
-import type { SyncLogEntry, SyncOverview, SyncQuery } from "../domain/sync-activity";
+import type {
+  InboxItem,
+  InboxSummary,
+  SyncLogEntry,
+  SyncOverview,
+  SyncQuery,
+} from "../domain/sync-activity";
 
 /**
  * Porta da sincronização.
@@ -15,4 +21,13 @@ export interface SyncRepository {
   isAvailable(): boolean;
   overview(): Promise<SyncOverview>;
   logs(query: SyncQuery): Promise<Page<SyncLogEntry>>;
+
+  /**
+   * Fila de entrada da nuvem.
+   *
+   * Ao contrário de `logs` e `overview`, esta existe nos dois modos: a fila
+   * mora na nuvem, e o programa da loja também consegue consultá-la.
+   */
+  inboxSummary(): Promise<InboxSummary>;
+  inbox(query: SyncQuery): Promise<Page<InboxItem>>;
 }

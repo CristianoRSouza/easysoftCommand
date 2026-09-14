@@ -1,4 +1,6 @@
 import type { SyncRepository } from "../application/sync-repository";
+import type { InboxItem, InboxSummary } from "../domain/sync-activity";
+import { INBOX_COLUMNS, toInboxItem } from "./inbox-mapper";
 import {
   toDirection,
   toSyncStatus,
@@ -113,6 +115,65 @@ export class PostgresSyncRepository implements SyncRepository {
 
     return {
       items: result.rows.map(toEntry),
+      total: result.rows[0] ? asNumber(result.rows[0].total) : 0,
+    };
+  }
+
+  /**
+   * A fila de entrada existe nos dois modos: ela mora na nuvem, e o programa da
+   * loja consulta o mesmo esquema replicado em `ecb_sync.inbox`.
+   */
+  async inboxSummary(): Promise<InboxSummary> {
+    const result = await this.api.query<Row>(
+      `SELECT
+         COUNT(*) FILTER (WHERE i.apply_status IN ('applied','done','ok'))   AS applied,
+         COUNT(*) FILTER (WHERE i.apply_status IN ('pending','queued'))      AS pending,
+         COUNT(*) FILTER (WHERE i.apply_status IN ('failed','error'))        AS failed,
+         MIN(i.received_at) FILTER (WHERE i.apply_status IN ('pending','queued')) AS oldest
+       FROM ecb_sync.inbox i`,
+    );
+    if (!result.ok) throw new Error(`Falha ao ler a fila: ${result.error}`);
+
+    const row = result.rows[0];
+    return {
+      applied: row ? asNumber(row.applied) : 0,
+      pending: row ? asNumber(row.pending) : 0,
+      failed: row ? asNumber(row.failed) : 0,
+      oldestPendingAt: row?.oldest == null ? null : asIsoDate(row.oldest),
+    };
+  }
+
+  async inbox(query: SyncQuery): Promise<Page<InboxItem>> {
+    const { from } = pageToRange(query.page, query.pageSize);
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+
+    if (query.status === "error") conditions.push("i.apply_status IN ('failed','error')");
+    if (query.range.from) {
+      params.push(startOfDayIso(query.range.from));
+      conditions.push(`i.received_at >= $${params.length}`);
+    }
+    if (query.range.to) {
+      params.push(startOfNextDayIso(query.range.to));
+      conditions.push(`i.received_at < $${params.length}`);
+    }
+
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    params.push(query.pageSize, from);
+
+    const result = await this.api.query<Row>(
+      `SELECT ${INBOX_COLUMNS.split(", ").map((c) => `i.${c}`).join(", ")},
+              COUNT(*) OVER () AS total
+       FROM ecb_sync.inbox i
+       ${where}
+       ORDER BY i.received_at DESC
+       LIMIT $${params.length - 1} OFFSET $${params.length}`,
+      params,
+    );
+    if (!result.ok) throw new Error(`Falha ao ler a fila: ${result.error}`);
+
+    return {
+      items: result.rows.map(toInboxItem),
       total: result.rows[0] ? asNumber(result.rows[0].total) : 0,
     };
   }

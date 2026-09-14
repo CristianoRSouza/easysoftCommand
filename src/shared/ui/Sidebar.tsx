@@ -11,6 +11,12 @@ import {
   Monitor,
   RefreshCw,
   ScrollText,
+  QrCode,
+  Cpu,
+  CloudUpload,
+  Wand2,
+  KeyRound,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,7 +59,18 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { to: "/totens", label: "Totens", icon: Monitor },
       { to: "/sincronizacao", label: "Sincronização", icon: RefreshCw },
+      { to: "/fila-nuvem", label: "Fila da nuvem", icon: CloudUpload },
+      { to: "/agentes", label: "Agentes de Serviço", icon: Cpu },
+      { to: "/pixnopdv", label: "PIXnoPDV", icon: QrCode },
       { to: "/auditoria", label: "Auditoria", icon: ScrollText },
+    ],
+  },
+  {
+    title: "Ajuda",
+    items: [
+      { to: "/assistente", label: "Assistente", icon: Wand2 },
+      { to: "/primeiro-acesso", label: "Primeiro acesso", icon: KeyRound },
+      { to: "/manual", label: "Manual", icon: BookOpen },
     ],
   },
 ];

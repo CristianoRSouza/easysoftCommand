@@ -43,6 +43,14 @@ import type { AuditRepository } from "@/modules/audit/application/audit-reposito
 import { SupabaseAuditRepository } from "@/modules/audit/infrastructure/supabase-audit-repository";
 import { PostgresAuditRepository } from "@/modules/audit/infrastructure/postgres-audit-repository";
 
+import type { AgentRepository } from "@/modules/agents/application/agent-repository";
+import { SupabaseAgentRepository } from "@/modules/agents/infrastructure/supabase-agent-repository";
+import { PostgresAgentRepository } from "@/modules/agents/infrastructure/postgres-agent-repository";
+
+import type { PixRepository } from "@/modules/pixnopdv/application/pix-repository";
+import { SupabasePixRepository } from "@/modules/pixnopdv/infrastructure/supabase-pix-repository";
+import { PostgresPixRepository } from "@/modules/pixnopdv/infrastructure/postgres-pix-repository";
+
 import type { UnitRepository } from "@/modules/units/application/unit-repository";
 import { SupabaseUnitRepository } from "@/modules/units/infrastructure/supabase-unit-repository";
 import { PostgresUnitRepository } from "@/modules/units/infrastructure/postgres-unit-repository";
@@ -59,6 +67,8 @@ export interface Container {
   sync: SyncRepository;
   revenue: RevenueRepository;
   audit: AuditRepository;
+  agents: AgentRepository;
+  pix: PixRepository;
 }
 
 /**
@@ -86,6 +96,8 @@ export function createContainer(tenant: Tenant | null): Container {
       sync: new PostgresSyncRepository(api),
       revenue: new PostgresRevenueRepository(api),
       audit: new PostgresAuditRepository(api),
+      agents: new PostgresAgentRepository(api),
+      pix: new PostgresPixRepository(api),
     };
   }
 
@@ -101,8 +113,10 @@ export function createContainer(tenant: Tenant | null): Container {
     nfce: new SupabaseNfceRepository(supabase, tenant),
     issuer: new SupabaseIssuerRepository(supabase, tenant),
     totems: new SupabaseTotemRepository(supabase, tenant),
-    sync: new SupabaseSyncRepository(),
+    sync: new SupabaseSyncRepository(supabase, tenant),
     revenue: new SupabaseRevenueRepository(supabase, tenant),
     audit: new SupabaseAuditRepository(supabase, tenant),
+    agents: new SupabaseAgentRepository(supabase, tenant),
+    pix: new SupabasePixRepository(supabase, tenant),
   };
 }

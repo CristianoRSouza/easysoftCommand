@@ -28,52 +28,54 @@ function getPool() {
 }
 
 /**
- * Colunas de segredo que nunca podem chegar ao renderer.
+ * Padrões de nome que denunciam uma coluna de segredo.
  *
- * No banco elas existem em duas formas: cifrada (`*_encrypted`, o que o
- * Sync-Service grava) e em claro (herança do formato antigo). A versão em claro
- * não serve ao painel e não deve sair do processo principal.
+ * É uma regra, não uma lista. Três tentativas ensinaram por quê: primeiro a
+ * proteção era por tabela e só cobria o emitente — o totem vazava. Virou lista
+ * de colunas e cobriu os dois — o PIXnoPDV vazava. Lista é lista: sempre falta
+ * uma, e quem acrescenta uma tabela nova não vai lembrar de vir aqui.
  *
- * A lista é de COLUNAS, não de tabelas, e é conferida em toda consulta. Filtrar
- * por tabela obriga a lembrar de cada uma que guarda segredo — e esquecer uma é
- * fácil: o emitente estava protegido, o totem não estava, e os dois guardam
- * token da Aditum em claro.
+ * Com padrão, uma coluna nova chamada `qualquer_coisa_token` já nasce coberta.
  */
-const COLUNAS_SECRETAS = [
-  'aditum_tef_partner_token',
-  'aditum_tef_activation_code',
-  'aditum_partner_token',
-  'aditum_activation_code',
-  'apikey_easyerp',
-  'nfce_service_api_key',
-  'tef_http_api_key',
-  'pix_http_api_key',
-  'certificate_password',
-];
+const PADROES_SECRETOS = [/token/i, /secret/i, /password/i, /senha/i, /api_?key/i, /activation_code/i];
+
+/**
+ * Sufixos que podem passar apesar de casarem com os padrões.
+ *
+ * `*_encrypted` é o valor cifrado, e `*_set` / `*_kid` são metadados. O painel
+ * precisa deles para dizer se a integração está configurada — e nenhum revela
+ * o segredo.
+ */
+const SUFIXOS_PERMITIDOS = [/_encrypted$/i, /_set$/i, /_kid$/i, /_prefix$/i];
+
+function ehColunaSecreta(nome) {
+  if (SUFIXOS_PERMITIDOS.some((sufixo) => sufixo.test(nome))) return false;
+  return PADROES_SECRETOS.some((padrao) => padrao.test(nome));
+}
 
 /**
  * Rede de proteção.
  *
- * Os repositórios listam as colunas uma a uma e nunca pedem estas — não pedir é
- * mais forte que apagar depois. Mas `db:query` recebe SQL arbitrário, e basta
- * um `SELECT *` futuro para o segredo vazar. A redação aqui é o que garante a
- * invariante mesmo quando alguém esquecer.
- *
- * As variantes `*_encrypted` passam de propósito: são cifradas, e o painel
- * precisa delas para saber se a integração está configurada.
+ * Os repositórios listam as colunas uma a uma e nunca pedem segredo — não pedir
+ * é mais forte que apagar depois. Mas `db:query` recebe SQL arbitrário, e basta
+ * um `SELECT *` futuro para vazar. A redação aqui é o que garante a invariante
+ * mesmo quando alguém esquecer.
  */
 function redigirSegredos(rows) {
   if (!Array.isArray(rows) || rows.length === 0) return rows;
+
+  // As linhas de um resultado têm as mesmas colunas: decidir uma vez basta.
+  const primeira = rows.find((row) => row && typeof row === 'object');
+  if (!primeira) return rows;
+
+  const aRemover = Object.keys(primeira).filter(ehColunaSecreta);
+  if (aRemover.length === 0) return rows;
+
   return rows.map((row) => {
     if (!row || typeof row !== 'object') return row;
-    let copia = null;
-    for (const coluna of COLUNAS_SECRETAS) {
-      if (coluna in row) {
-        copia = copia ?? { ...row };
-        delete copia[coluna];
-      }
-    }
-    return copia ?? row;
+    const copia = { ...row };
+    for (const coluna of aRemover) delete copia[coluna];
+    return copia;
   });
 }
 

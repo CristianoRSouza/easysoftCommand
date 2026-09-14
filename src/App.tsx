@@ -17,6 +17,12 @@ import { TotemsPage } from "@/modules/totems/ui/TotemsPage";
 import { SyncPage } from "@/modules/sync/ui/SyncPage";
 import { RevenuePage } from "@/modules/revenue/ui/RevenuePage";
 import { AuditPage } from "@/modules/audit/ui/AuditPage";
+import { AgentsPage } from "@/modules/agents/ui/AgentsPage";
+import { PixPage } from "@/modules/pixnopdv/ui/PixPage";
+import { CloudQueuePage } from "@/modules/sync/ui/CloudQueuePage";
+import { ManualPage } from "@/pages/ManualPage";
+import { WizardPage } from "@/pages/WizardPage";
+import { BootstrapCodePage } from "@/pages/BootstrapCodePage";
 
 // `staleTime` evita refazer a consulta a cada foco de janela — num painel
 // administrativo os dados não mudam de segundo a segundo.
@@ -52,6 +58,12 @@ export default function App() {
                     <Route path="totens" element={<TotemsPage />} />
                     <Route path="sincronizacao" element={<SyncPage />} />
                     <Route path="auditoria" element={<AuditPage />} />
+                    <Route path="fila-nuvem" element={<CloudQueuePage />} />
+                    <Route path="agentes" element={<AgentsPage />} />
+                    <Route path="pixnopdv" element={<PixPage />} />
+                    <Route path="assistente" element={<WizardPage />} />
+                    <Route path="primeiro-acesso" element={<BootstrapCodePage />} />
+                    <Route path="manual" element={<ManualPage />} />
                   </Route>
                 </Routes>
               </HashRouter>
