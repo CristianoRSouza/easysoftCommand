@@ -1,12 +1,10 @@
-import type { Unit, UnitDraft, UnitQuery } from "../domain/unit";
+import type { Unit, UnitQuery } from "../domain/unit";
 
-/** Unidades são poucas e não mudam: a lista inteira vem de uma vez, sem paginação. */
+/**
+ * Unidades são poucas e não mudam: a lista inteira vem de uma vez, sem paginação.
+ *
+ * Sem operação de escrita, de propósito — ver o comentário em `unit.ts`.
+ */
 export interface UnitRepository {
   list(query: UnitQuery): Promise<Unit[]>;
-
-  /** Quantos produtos apontam para esta unidade. Zero permite desativá-la. */
-  countProductsUsing(unitId: string): Promise<number>;
-
-  /** Grava a alteração. O rascunho já chega validado e normalizado. */
-  update(unitId: string, draft: UnitDraft): Promise<void>;
 }

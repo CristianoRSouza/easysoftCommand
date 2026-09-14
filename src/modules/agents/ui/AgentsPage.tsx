@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
+import { Pencil, TriangleAlert } from "lucide-react";
+import { AgentDialog } from "./AgentDialog";
 import {
   accumulatesWithoutSending,
   agentHealth,
@@ -29,7 +31,7 @@ function ms(value: number | null): string {
   return value >= 1000 ? `${(value / 1000).toFixed(1)} s` : `${value} ms`;
 }
 
-function AgentCard({ agent }: { agent: Agent }) {
+function AgentCard({ agent, onEdit }: { agent: Agent; onEdit: () => void }) {
   const health = agentHealth(agent);
 
   return (
@@ -43,7 +45,16 @@ function AgentCard({ agent }: { agent: Agent }) {
             </p>
           )}
         </div>
-        <Badge tone={HEALTH_TONE[health]}>{AGENT_HEALTH_LABEL[health]}</Badge>
+        <div className="flex items-center gap-2">
+          <Badge tone={HEALTH_TONE[health]}>{AGENT_HEALTH_LABEL[health]}</Badge>
+          <button
+            onClick={onEdit}
+            className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            title={`Configurar ${agent.name}`}
+          >
+            <Pencil size={15} />
+          </button>
+        </div>
       </div>
 
       {/* Contingência ligada sem transmissão automática trava a loja em
@@ -88,6 +99,7 @@ function AgentCard({ agent }: { agent: Agent }) {
 
 export function AgentsPage() {
   const { agents } = useContainer();
+  const [editando, setEditando] = useState<Agent | null>(null);
   const { data, isPending, error } = useQuery<Agent[]>({
     queryKey: ["agents"],
     queryFn: () => agents.list(),
@@ -116,11 +128,13 @@ export function AgentsPage() {
           )}
           <div className="grid gap-4 lg:grid-cols-2">
             {lista.map((agent) => (
-              <AgentCard key={agent.id} agent={agent} />
+              <AgentCard key={agent.id} agent={agent} onEdit={() => setEditando(agent)} />
             ))}
           </div>
         </>
       )}
+
+      {editando && <AgentDialog agent={editando} onClose={() => setEditando(null)} />}
     </div>
   );
 }
