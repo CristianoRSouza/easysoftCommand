@@ -1,4 +1,5 @@
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
+import { cardBrandName, paymentMethodName } from "./nfce-payment-codes";
 import type {
   NfceFiscalTotals,
   NfceHistoryEntry,
@@ -69,7 +70,7 @@ export function toTotals(row: Row): NfceFiscalTotals {
 
 export function toItem(row: Row): NfceItem {
   return {
-    sequence: asNumber(row.item_number ?? row.item ?? row.sequence),
+    sequence: asNumber(row.item_number),
     productCode: asText(row.product_code) ?? "",
     description: asText(row.description) ?? "",
     ncm: asText(row.ncm) ?? "",
@@ -77,21 +78,29 @@ export function toItem(row: Row): NfceItem {
     unit: asText(row.unit) ?? "",
     quantity: asNumber(row.quantity),
     unitPrice: asNumber(row.unit_price),
-    grossValue: asNumber(row.gross_value ?? row.total_value),
+    grossValue: asNumber(row.gross_total),
     discount: asNumber(row.discount_value),
     icmsValue: asNumber(row.icms_value),
   };
 }
 
+/**
+ * Converte a linha de pagamento.
+ *
+ * Os nomes de coluna vêm do banco de verdade: `payment_value` e `change_value`,
+ * não `amount`. Ler o campo errado não quebra a tela — mostra R$ 0,00 em toda
+ * linha, que é pior: parece dado, e não é.
+ */
 export function toPayment(row: Row): NfcePayment {
+  const method = asText(row.payment_method) ?? "";
   return {
-    sequence: asNumber(row.sequence ?? row.seq),
-    method: asText(row.payment_method) ?? "",
-    methodDescription: asText(row.payment_method_description),
-    amount: asNumber(row.amount ?? row.value),
+    sequence: asNumber(row.payment_number),
+    method,
+    methodDescription: paymentMethodName(method),
+    amount: asNumber(row.payment_value),
     change: asNumber(row.change_value),
-    cardBrand: asText(row.card_brand_description) ?? asText(row.card_brand),
-    authorizationNsu: asText(row.authorization_nsu) ?? asText(row.nsu),
+    cardBrand: cardBrandName(asText(row.card_brand)),
+    authorizationNsu: asText(row.authorization_number),
   };
 }
 

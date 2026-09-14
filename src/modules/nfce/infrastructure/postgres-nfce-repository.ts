@@ -11,7 +11,8 @@ import {
   startOfNextDayIso,
   type Page,
 } from "@/shared/domain/paging";
-import type { ElectronApi } from "@/shared/runtime/electron-api";
+import type { ElectronApi, Statement } from "@/shared/runtime/electron-api";
+import type { CorrectionDraft, FiscalContext } from "../domain/nfce-correction";
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 import type { NfceDetail } from "../domain/nfce-detail";
 import {
@@ -198,5 +199,128 @@ export class PostgresNfceRepository implements NfceRepository {
       history: sortHistory([...logs.map(toLogEntry), ...events.map(toEventEntry)]),
       authorizedXml: asText(nota.authorized_xml),
     };
+  }
+
+  async fiscalContext(noteId: string): Promise<FiscalContext | null> {
+    const result = await this.api.query<Record<string, unknown>>(
+      `SELECT iss.tax_regime_code, iss.uf AS issuer_uf, rec.uf AS recipient_uf
+       FROM nfce_notes n
+       LEFT JOIN nfce_issuer    iss ON iss.note_id = n.id
+       LEFT JOIN nfce_recipient rec ON rec.note_id = n.id
+       WHERE n.id = $1`,
+      [noteId],
+    );
+    if (!result.ok) throw new Error(`Falha ao ler o contexto fiscal: ${result.error}`);
+
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+      taxRegimeCode: row.tax_regime_code == null ? null : asNumber(row.tax_regime_code),
+      issuerUf: (asText(row.issuer_uf) ?? "").toUpperCase(),
+      recipientUf: (asText(row.recipient_uf) ?? "").toUpperCase(),
+    };
+  }
+
+  async itemIcmsCodes(noteId: string): Promise<Map<number, string>> {
+    const result = await this.api.query<Record<string, unknown>>(
+      `SELECT i.item_number, COALESCE(icms.cst, icms.csosn) AS codigo
+       FROM nfce_items i
+       LEFT JOIN nfce_items_icms icms ON icms.item_id = i.id
+       WHERE i.note_id = $1`,
+      [noteId],
+    );
+    if (!result.ok) throw new Error(`Falha ao ler os códigos de ICMS: ${result.error}`);
+
+    const mapa = new Map<number, string>();
+    for (const row of result.rows) {
+      mapa.set(asNumber(row.item_number), asText(row.codigo) ?? "");
+    }
+    return mapa;
+  }
+
+  /**
+   * Grava a correção numa transação só.
+   *
+   * Os comandos tocam apenas colunas de classificação fiscal e de pagamento —
+   * nenhuma delas participa do cálculo do total da nota, que é somado de
+   * `gross_total`, descontos, frete, seguro e outras despesas. O valor não muda
+   * por construção, e não por conferência posterior.
+   *
+   * O projeto anterior aplicava as alterações uma a uma e só então verificava
+   * se o total havia mudado. Se a verificação falhasse, devolvia erro com os
+   * dados já gravados e sem transação para desfazer.
+   */
+  async saveCorrection(noteId: string, draft: CorrectionDraft): Promise<void> {
+    const statements: Statement[] = [];
+
+    for (const item of draft.items) {
+      statements.push({
+        sql: `UPDATE nfce_items
+              SET ncm = $3, cfop = $4, cest = NULLIF($5, '')
+              WHERE note_id = $1 AND item_number = $2`,
+        params: [noteId, item.sequence, item.ncm, item.cfop, item.cest],
+      });
+      // CST tem 2 dígitos e CSOSN tem 3: o mesmo campo alimenta colunas
+      // diferentes conforme o regime, e a outra precisa ficar nula.
+      statements.push({
+        sql: `UPDATE nfce_items_icms icms
+              SET cst   = CASE WHEN LENGTH($3) = 2 THEN $3 ELSE NULL END,
+                  csosn = CASE WHEN LENGTH($3) = 3 THEN $3 ELSE NULL END
+              FROM nfce_items i
+              WHERE i.id = icms.item_id AND i.note_id = $1 AND i.item_number = $2`,
+        params: [noteId, item.sequence, item.icmsCode],
+      });
+    }
+
+    for (const payment of draft.payments) {
+      statements.push({
+        sql: `UPDATE nfce_payments
+              SET payment_method = $3, payment_value = $4, change_value = $5
+              WHERE note_id = $1 AND payment_number = $2`,
+        params: [noteId, payment.sequence, payment.method, payment.value, payment.change],
+      });
+    }
+
+    statements.push({
+      sql: `INSERT INTO nfce_recipient (note_id, cpf, cnpj, name, email)
+            VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''))
+            ON CONFLICT (note_id) DO UPDATE
+            SET cpf = EXCLUDED.cpf, cnpj = EXCLUDED.cnpj,
+                name = EXCLUDED.name, email = EXCLUDED.email`,
+      params: [
+        noteId,
+        draft.recipient.cpf,
+        draft.recipient.cnpj,
+        draft.recipient.name,
+        draft.recipient.email,
+      ],
+    });
+
+    statements.push({
+      sql: `INSERT INTO nfce_additional_info (note_id, additional_info)
+            VALUES ($1, NULLIF($2, ''))
+            ON CONFLICT (note_id) DO UPDATE
+            SET additional_info = EXCLUDED.additional_info`,
+      params: [noteId, draft.additionalInfo],
+    });
+
+    // O registro entra na mesma transação: correção sem rastro é pior que
+    // correção nenhuma, porque ninguém sabe o que foi mexido.
+    statements.push({
+      sql: `INSERT INTO nfce_logs (note_id, type, level, message, details)
+            VALUES ($1, 'manual_action', 'INFO',
+                    'Correção manual de campos elegíveis realizada pelo painel', $2)`,
+      params: [
+        noteId,
+        JSON.stringify({
+          action: "manual_correction_save",
+          itemCount: draft.items.length,
+          paymentCount: draft.payments.length,
+        }),
+      ],
+    });
+
+    const result = await this.api.execute(statements);
+    if (!result.ok) throw new Error(`Falha ao salvar a correção: ${result.error}`);
   }
 }

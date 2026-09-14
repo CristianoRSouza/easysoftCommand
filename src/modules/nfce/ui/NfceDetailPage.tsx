@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, TriangleAlert } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, TriangleAlert, Wrench } from "lucide-react";
+import { NfceCorrectionDialog } from "./NfceCorrectionDialog";
+import { canCorrect } from "../domain/nfce-correction";
 import {
   itemsMismatch,
   sumItems,
@@ -46,6 +49,7 @@ function TotalRow({ label, value, strong }: { label: string; value: number; stro
 export function NfceDetailPage() {
   const { noteId } = useParams<{ noteId: string }>();
   const { nfce } = useContainer();
+  const [corrigindo, setCorrigindo] = useState(false);
 
   const { data, isPending, error } = useQuery<NfceDetail | null>({
     queryKey: ["nfce", "detalhe", noteId],
@@ -91,7 +95,19 @@ export function NfceDetailPage() {
           </h1>
           <p className="mt-1 font-mono text-xs text-muted-foreground">{note.accessKey ?? "Sem chave de acesso"}</p>
         </div>
-        <Badge tone={NFCE_STATUS_TONE[note.status]}>{NFCE_STATUS_LABEL[note.status]}</Badge>
+        <div className="flex items-center gap-3">
+          <Badge tone={NFCE_STATUS_TONE[note.status]}>{NFCE_STATUS_LABEL[note.status]}</Badge>
+          {/* O botão só existe quando a nota pode ser corrigida. Oferecer a
+              ação e recusá-la depois seria desperdiçar o tempo de quem tenta. */}
+          {canCorrect(data) && (
+            <button
+              onClick={() => setCorrigindo(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-gradient-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+            >
+              <Wrench size={15} /> Corrigir
+            </button>
+          )}
+        </div>
       </div>
 
       {/* A conferência que denuncia nota inconsistente. Só avisa quando há
@@ -285,6 +301,10 @@ export function NfceDetailPage() {
           </ol>
         )}
       </Section>
+
+      {corrigindo && (
+        <NfceCorrectionDialog detail={data} onClose={() => setCorrigindo(false)} />
+      )}
     </div>
   );
 }
