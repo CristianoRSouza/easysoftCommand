@@ -1,35 +1,57 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { TriangleAlert, X } from "lucide-react";
+import { Info, TriangleAlert, X } from "lucide-react";
 import {
   draftFrom,
+  inspectAgent,
   LOG_LEVELS,
-  requiresAcknowledgement,
-  validateAgent,
   type Agent,
   type AgentDraft,
-  type FieldError,
+  type AgentWarning,
 } from "../domain/agent";
 import { saveAgent } from "../application/save-agent";
 import { useContainer } from "@/shared/container/container-context";
 import { useSession } from "@/shared/auth/auth-context";
 import { FIELD } from "@/shared/ui/primitives";
 
-function errorFor(errors: FieldError[], field: keyof AgentDraft): string | null {
-  return errors.find((e) => e.field === field)?.message ?? null;
+function warningFor(warnings: AgentWarning[], field: keyof AgentDraft): AgentWarning | null {
+  return warnings.find((w) => w.field === field) ?? null;
+}
+
+/**
+ * Aviso de campo — informa e não impede.
+ *
+ * A borda muda de cor, mas o botão Salvar continua funcionando: o projeto
+ * anterior aceita qualquer valor aqui, e mudar isso seria transformar uma
+ * migração em decisão de produto.
+ */
+function Aviso({ warning }: { warning: AgentWarning }) {
+  const perigo = warning.severity === "danger";
+  return (
+    <span
+      className={`flex items-start gap-1.5 text-xs ${perigo ? "text-destructive" : "text-warning"}`}
+    >
+      {perigo ? (
+        <TriangleAlert size={13} className="mt-0.5 shrink-0" />
+      ) : (
+        <Info size={13} className="mt-0.5 shrink-0" />
+      )}
+      {warning.message}
+    </span>
+  );
 }
 
 function Numero({
   label,
   hint,
   value,
-  erro,
+  warning,
   onChange,
 }: {
   label: string;
   hint?: string;
   value: number;
-  erro: string | null;
+  warning: AgentWarning | null;
   onChange: (v: number) => void;
 }) {
   return (
@@ -39,31 +61,21 @@ function Numero({
         type="number"
         value={Number.isFinite(value) ? value : ""}
         onChange={(e) => onChange(e.target.value === "" ? Number.NaN : Number(e.target.value))}
-        className={`${FIELD} w-full ${erro ? "border-destructive" : ""}`}
+        className={`${FIELD} w-full ${warning ? "border-warning" : ""}`}
       />
-      {erro ? (
-        <span className="block text-xs text-destructive">{erro}</span>
-      ) : (
-        hint && <span className="block text-xs text-muted-foreground">{hint}</span>
+      {warning ? <Aviso warning={warning} /> : hint && (
+        <span className="block text-xs text-muted-foreground">{hint}</span>
       )}
     </label>
   );
 }
 
-/**
- * Edição da configuração do agente.
- *
- * Valida no envio, não a cada tecla: acusar erro enquanto alguém ainda digita
- * um número é ruído.
- */
 export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => void }) {
   const { agents } = useContainer();
   const { session } = useSession();
   const queryClient = useQueryClient();
 
   const [draft, setDraft] = useState<AgentDraft>(() => draftFrom(agent));
-  const [errors, setErrors] = useState<FieldError[]>([]);
-  const [confirmouAcumulo, setConfirmouAcumulo] = useState(false);
 
   useEffect(() => {
     const aoTeclar = (e: KeyboardEvent) => {
@@ -79,7 +91,6 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
         // No modo local não há sessão: o registro fica como operador do painel,
         // que é o que se sabe com honestidade.
         performedBy: session?.user.email ?? "painel local",
-        acknowledgedAccumulation: confirmouAcumulo,
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["agents"] });
@@ -90,9 +101,7 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const encontrados = validateAgent(draft);
-    setErrors(encontrados);
-    if (encontrados.length === 0) mutation.mutate();
+    mutation.mutate();
   }
 
   const set =
@@ -100,7 +109,10 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
     (valor: AgentDraft[K]) =>
       setDraft((d) => ({ ...d, [chave]: valor }));
 
-  const vaiAcumular = requiresAcknowledgement(agent, draft);
+  // Avisos recalculados a cada mudança: quem está editando vê a consequência
+  // enquanto decide, não depois de tentar salvar.
+  const warnings = inspectAgent(draft);
+  const acumula = warningFor(warnings, "contingencyAutoTransmit");
 
   return (
     <div
@@ -159,25 +171,25 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
             label="Limite de chamadas"
             hint="Por minuto"
             value={draft.apiRateLimit}
-            erro={errorFor(errors, "apiRateLimit")}
+            warning={warningFor(warnings, "apiRateLimit")}
             onChange={set("apiRateLimit")}
           />
           <Numero
             label="Tempo limite SEFAZ (ms)"
             value={draft.timeoutMs}
-            erro={errorFor(errors, "timeoutMs")}
+            warning={warningFor(warnings, "timeoutMs")}
             onChange={set("timeoutMs")}
           />
           <Numero
             label="Tentativas"
             value={draft.retryMaxAttempts}
-            erro={errorFor(errors, "retryMaxAttempts")}
+            warning={warningFor(warnings, "retryMaxAttempts")}
             onChange={set("retryMaxAttempts")}
           />
           <Numero
             label="Espera entre tentativas (ms)"
             value={draft.retryBackoffMs}
-            erro={errorFor(errors, "retryBackoffMs")}
+            warning={warningFor(warnings, "retryBackoffMs")}
             onChange={set("retryBackoffMs")}
           />
         </div>
@@ -210,16 +222,10 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
                   value={draft.contingencyReason}
                   onChange={(e) => set("contingencyReason")(e.target.value)}
                   placeholder="SEFAZ indisponível, queda de internet…"
-                  className={`${FIELD} w-full ${errorFor(errors, "contingencyReason") ? "border-destructive" : ""}`}
+                  className={`${FIELD} w-full`}
                 />
-                {errorFor(errors, "contingencyReason") ? (
-                  <span className="block text-xs text-destructive">
-                    {errorFor(errors, "contingencyReason")}
-                  </span>
-                ) : (
-                  <span className="block text-xs text-muted-foreground">
-                    Quem encontrar a loja neste estado semanas depois precisa saber por quê.
-                  </span>
+                {warningFor(warnings, "contingencyReason") && (
+                  <Aviso warning={warningFor(warnings, "contingencyReason")!} />
                 )}
               </label>
 
@@ -246,30 +252,20 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
               <Numero
                 label="Intervalo do worker (ms)"
                 value={draft.contingencyWorkerIntervalMs}
-                erro={errorFor(errors, "contingencyWorkerIntervalMs")}
+                warning={warningFor(warnings, "contingencyWorkerIntervalMs")}
                 onChange={set("contingencyWorkerIntervalMs")}
               />
             </>
           )}
         </div>
 
-        {/* A combinação que trava a loja em silêncio. A regra não proíbe — há
-            casos em que se quer segurar o envio — mas exige que a escolha seja
-            deliberada, e não efeito colateral de mexer noutro campo. */}
-        {vaiAcumular && (
-          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-3">
-            <input
-              type="checkbox"
-              checked={confirmouAcumulo}
-              onChange={(e) => setConfirmouAcumulo(e.target.checked)}
-              className="mt-0.5 accent-destructive"
-            />
-            <span className="text-sm text-destructive">
-              <TriangleAlert size={14} className="mr-1 inline" />
-              Entendo que as notas vão se acumular sem chegar à SEFAZ enquanto esta combinação
-              estiver ativa.
-            </span>
-          </label>
+        {/* O aviso mais grave ganha destaque próprio, mas não bloqueia: há casos
+            em que se quer mesmo segurar o envio. */}
+        {acumula && (
+          <p className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-3 text-sm text-destructive">
+            <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+            <span>{acumula.message}</span>
+          </p>
         )}
 
         {mutation.error && (

@@ -1,10 +1,9 @@
 import {
   changedFields,
   draftFrom,
+  missingNumbers,
   normalizeAgent,
-  requiresAcknowledgement,
-  validateAgent,
-  AgentRuleViolation,
+  AgentInvalidValue,
   type Agent,
   type AgentDraft,
 } from "../domain/agent";
@@ -13,16 +12,18 @@ import type { AgentChange, AgentRepository } from "./agent-repository";
 export interface SaveAgentOptions {
   /** Quem está salvando, para a auditoria. */
   performedBy: string;
-  /** Confirmação explícita de que a contingência vai acumular notas. */
-  acknowledgedAccumulation?: boolean;
 }
 
 /**
  * Salva a configuração de um agente.
  *
- * Calcula o que mudou antes de gravar: a auditoria registra campos alterados,
- * e mandar todos faria o histórico dizer que tudo mudou sempre — inútil para
- * quem investiga depois.
+ * A única coisa que impede a gravação é campo numérico vazio — sem valor não há
+ * o que gravar. Todo o resto é aviso na tela: o projeto anterior não valida
+ * nada aqui, e reproduzir esse comportamento é o trabalho da migração.
+ *
+ * Calcula o que mudou antes de gravar: a auditoria registra campos alterados, e
+ * mandar todos faria o histórico dizer que tudo mudou sempre — inútil para quem
+ * investiga depois.
  */
 export function saveAgent(repository: AgentRepository) {
   return async (
@@ -30,20 +31,14 @@ export function saveAgent(repository: AgentRepository) {
     draft: AgentDraft,
     options: SaveAgentOptions,
   ): Promise<{ changed: boolean }> => {
-    const errors = validateAgent(draft);
-    if (errors.length > 0) {
-      throw new AgentRuleViolation(errors.map((e) => e.message).join(" "));
-    }
-
-    const normalizado = normalizeAgent(draft);
-
-    if (requiresAcknowledgement(agent, normalizado) && !options.acknowledgedAccumulation) {
-      throw new AgentRuleViolation(
-        "Contingência ligada com transmissão automática desligada: as notas vão se acumular " +
-          "sem chegar à SEFAZ. Confirme que é isso mesmo.",
+    const faltando = missingNumbers(draft);
+    if (faltando.length > 0) {
+      throw new AgentInvalidValue(
+        `Preencha ${faltando.length === 1 ? "o campo numérico vazio" : "os campos numéricos vazios"}.`,
       );
     }
 
+    const normalizado = normalizeAgent(draft);
     const campos = changedFields(agent, normalizado);
     if (campos.length === 0) return { changed: false };
 

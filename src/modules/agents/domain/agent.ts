@@ -101,13 +101,25 @@ export function draftFrom(agent: Agent): AgentDraft {
   };
 }
 
-export interface FieldError {
+/**
+ * Um alerta sobre o rascunho — informa, não impede.
+ *
+ * O projeto anterior não valida nada neste formulário, e essa permissividade
+ * pode ser deliberada: quando a SEFAZ cai numa sexta à noite, exigir que o
+ * operador preencha campos antes de ligar a contingência é atrito no pior
+ * momento possível. Uma migração reproduz o comportamento; melhorá-lo é decisão
+ * de produto, não do código.
+ *
+ * O meio-termo é dizer o que vai acontecer e deixar a pessoa decidir.
+ */
+export interface AgentWarning {
   field: keyof AgentDraft;
+  severity: "info" | "danger";
   message: string;
 }
 
-/** Limites de sanidade. Fora deles, o agente não opera bem — ou não opera. */
-const LIMITES = {
+/** Faixas em que cada valor costuma fazer sentido. Fora delas, avisa. */
+const FAIXAS = {
   timeoutMs: { min: 1000, max: 120000, nome: "O tempo limite da SEFAZ" },
   retryMaxAttempts: { min: 0, max: 20, nome: "O número de tentativas" },
   retryBackoffMs: { min: 0, max: 300000, nome: "A espera entre tentativas" },
@@ -115,43 +127,52 @@ const LIMITES = {
   contingencyWorkerIntervalMs: { min: 5000, max: 3600000, nome: "O intervalo do worker" },
 } as const;
 
-/**
- * Valida o rascunho antes de qualquer ida ao banco.
- *
- * Vive no domínio, e não na tela, porque a regra é a mesma independentemente de
- * quem chama — e porque validação que só existe no formulário deixa de valer
- * assim que alguém grava por outro caminho.
- */
-export function validateAgent(draft: AgentDraft): FieldError[] {
-  const errors: FieldError[] = [];
+function segundos(ms: number): string {
+  return ms >= 60000 ? `${Math.round(ms / 60000)} minutos` : `${Math.round(ms / 1000)} segundos`;
+}
 
-  for (const [campo, limite] of Object.entries(LIMITES)) {
+/**
+ * Examina o rascunho e devolve o que vale a pessoa saber antes de salvar.
+ *
+ * Nada aqui bloqueia. A única coisa que impede a gravação é valor que o banco
+ * não aceita — e isso o próprio banco recusa.
+ */
+export function inspectAgent(draft: AgentDraft): AgentWarning[] {
+  const warnings: AgentWarning[] = [];
+
+  for (const [campo, faixa] of Object.entries(FAIXAS)) {
     const valor = draft[campo as keyof AgentDraft];
-    if (typeof valor !== "number" || !Number.isFinite(valor)) {
-      errors.push({ field: campo as keyof AgentDraft, message: `${limite.nome} precisa ser um número.` });
-    } else if (valor < limite.min || valor > limite.max) {
-      errors.push({
+    if (typeof valor !== "number" || !Number.isFinite(valor)) continue;
+    if (valor < faixa.min || valor > faixa.max) {
+      warnings.push({
         field: campo as keyof AgentDraft,
-        message: `${limite.nome} deve ficar entre ${limite.min} e ${limite.max}.`,
+        severity: "info",
+        message: `${faixa.nome} costuma ficar entre ${faixa.min} e ${faixa.max}. ${
+          campo.endsWith("Ms") ? `${valor} equivale a ${segundos(valor)}.` : ""
+        }`.trim(),
       });
     }
   }
 
-  if (!LOG_LEVELS.includes(draft.logLevel as (typeof LOG_LEVELS)[number])) {
-    errors.push({ field: "logLevel", message: "Nível de log inválido." });
-  }
-
-  // Contingência é uma decisão que alguém toma por um motivo. Sem o motivo
-  // registrado, quem encontrar a loja nesse estado semanas depois não sabe se
-  // ainda faz sentido — e a tendência é deixar como está.
   if (draft.contingencyEnabled && draft.contingencyReason.trim() === "") {
-    errors.push({
+    warnings.push({
       field: "contingencyReason",
-      message: "Informe por que a contingência está sendo ligada.",
+      severity: "info",
+      message:
+        "Sem motivo registrado, quem encontrar a loja em contingência semanas depois não vai saber se ainda faz sentido.",
     });
   }
 
-  return errors;
+  if (draft.contingencyEnabled && !draft.contingencyAutoTransmit) {
+    warnings.push({
+      field: "contingencyAutoTransmit",
+      severity: "danger",
+      message:
+        "As notas vão se acumular sem chegar à SEFAZ enquanto esta combinação estiver ativa.",
+    });
+  }
+
+  return warnings;
 }
 
 export function normalizeAgent(draft: AgentDraft): AgentDraft {
@@ -170,23 +191,23 @@ export function changedFields(agent: Agent, draft: AgentDraft): (keyof AgentDraf
   );
 }
 
-export class AgentRuleViolation extends Error {
+/** Um número que o banco não aceita — o único caso que impede gravar. */
+export class AgentInvalidValue extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "AgentRuleViolation";
+    this.name = "AgentInvalidValue";
   }
 }
 
 /**
- * Ligar contingência sem transmissão automática precisa ser deliberado.
+ * Campos numéricos vazios ou não numéricos.
  *
- * Nessa combinação as notas se acumulam sem nunca serem enviadas à SEFAZ — a
- * loja continua vendendo e o passivo fiscal cresce em silêncio. A regra não
- * proíbe: há casos em que se quer segurar o envio. Ela exige que a escolha seja
- * consciente, e não um efeito colateral de mexer noutro campo.
+ * Diferente dos avisos: aqui não há valor a gravar, então a gravação não tem
+ * como acontecer. Não é regra de negócio, é ausência de dado.
  */
-export function requiresAcknowledgement(agent: Agent, draft: AgentDraft): boolean {
-  const passaAAcumular = draft.contingencyEnabled && !draft.contingencyAutoTransmit;
-  const jaAcumulava = agent.contingency.enabled && !agent.contingency.autoTransmit;
-  return passaAAcumular && !jaAcumulava;
+export function missingNumbers(draft: AgentDraft): (keyof AgentDraft)[] {
+  return (Object.keys(FAIXAS) as (keyof AgentDraft)[]).filter((campo) => {
+    const valor = draft[campo];
+    return typeof valor !== "number" || !Number.isFinite(valor);
+  });
 }
