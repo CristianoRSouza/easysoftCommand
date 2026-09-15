@@ -43,6 +43,10 @@ import type { AuditRepository } from "@/modules/audit/application/audit-reposito
 import { SupabaseAuditRepository } from "@/modules/audit/infrastructure/supabase-audit-repository";
 import { PostgresAuditRepository } from "@/modules/audit/infrastructure/postgres-audit-repository";
 
+import type { ServiceRepository } from "@/modules/services/application/service-repository";
+import { SupabaseServiceRepository } from "@/modules/services/infrastructure/supabase-service-repository";
+import { PostgresServiceRepository } from "@/modules/services/infrastructure/postgres-service-repository";
+
 import type { AgentRepository } from "@/modules/agents/application/agent-repository";
 import { SupabaseAgentRepository } from "@/modules/agents/infrastructure/supabase-agent-repository";
 import { PostgresAgentRepository } from "@/modules/agents/infrastructure/postgres-agent-repository";
@@ -69,6 +73,7 @@ export interface Container {
   audit: AuditRepository;
   agents: AgentRepository;
   pix: PixRepository;
+  services: ServiceRepository;
 }
 
 /**
@@ -98,6 +103,7 @@ export function createContainer(tenant: Tenant | null): Container {
       audit: new PostgresAuditRepository(api),
       agents: new PostgresAgentRepository(api),
       pix: new PostgresPixRepository(api),
+      services: new PostgresServiceRepository(api),
     };
   }
 
@@ -118,5 +124,6 @@ export function createContainer(tenant: Tenant | null): Container {
     audit: new SupabaseAuditRepository(supabase, tenant),
     agents: new SupabaseAgentRepository(supabase, tenant),
     pix: new SupabasePixRepository(supabase, tenant),
+    services: new SupabaseServiceRepository(),
   };
 }

@@ -1,4 +1,4 @@
-import type { Agent, AgentDraft } from "../domain/agent";
+import type { Agent, AgentDraft, NewAgentDraft } from "../domain/agent";
 
 /** Uma alteração registrada na auditoria: o campo, o valor antigo e o novo. */
 export interface AgentChange {
@@ -25,4 +25,7 @@ export interface AgentRepository {
    * Aqui é uma operação só — ou as duas valem, ou nenhuma.
    */
   update(agentId: string, update: AgentUpdate): Promise<void>;
+
+  /** Cria um agente e devolve o identificador gerado. */
+  create(draft: NewAgentDraft, performedBy: string): Promise<string>;
 }

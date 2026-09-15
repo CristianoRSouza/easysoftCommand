@@ -211,3 +211,35 @@ export function missingNumbers(draft: AgentDraft): (keyof AgentDraft)[] {
     return typeof valor !== "number" || !Number.isFinite(valor);
   });
 }
+
+/**
+ * Rascunho de um agente novo.
+ *
+ * Só aqui o nome entra: depois de criado ele identifica o agente nos registros
+ * de auditoria já gravados, e renomeá-lo tornaria o histórico ilegível.
+ */
+export interface NewAgentDraft extends AgentDraft {
+  name: string;
+}
+
+export function emptyAgentDraft(): NewAgentDraft {
+  return {
+    name: "",
+    isActive: true,
+    logLevel: "info",
+    timeoutMs: 15000,
+    retryMaxAttempts: 3,
+    retryBackoffMs: 2000,
+    apiRateLimit: 60,
+    contingencyEnabled: false,
+    contingencyReason: "",
+    contingencyAutoTransmit: true,
+    contingencyWorkerEnabled: true,
+    contingencyWorkerIntervalMs: 60000,
+  };
+}
+
+/** Sem nome não há como identificar o agente depois. É o único campo exigido. */
+export function missingName(draft: NewAgentDraft): boolean {
+  return draft.name.trim() === "";
+}

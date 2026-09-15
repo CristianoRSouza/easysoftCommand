@@ -19,6 +19,7 @@ import { RevenuePage } from "@/modules/revenue/ui/RevenuePage";
 import { AuditPage } from "@/modules/audit/ui/AuditPage";
 import { AgentsPage } from "@/modules/agents/ui/AgentsPage";
 import { PixPage } from "@/modules/pixnopdv/ui/PixPage";
+import { ServicesPage } from "@/modules/services/ui/ServicesPage";
 import { CloudQueuePage } from "@/modules/sync/ui/CloudQueuePage";
 import { ManualPage } from "@/pages/ManualPage";
 import { WizardPage } from "@/pages/WizardPage";
@@ -61,6 +62,7 @@ export default function App() {
                     <Route path="fila-nuvem" element={<CloudQueuePage />} />
                     <Route path="agentes" element={<AgentsPage />} />
                     <Route path="pixnopdv" element={<PixPage />} />
+                    <Route path="servicos" element={<ServicesPage />} />
                     <Route path="assistente" element={<WizardPage />} />
                     <Route path="primeiro-acesso" element={<BootstrapCodePage />} />
                     <Route path="manual" element={<ManualPage />} />

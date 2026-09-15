@@ -14,17 +14,23 @@ import { toAuditEntry } from "./audit-mapper";
  * A auditoria local vem de duas tabelas com o mesmo formato — uma por origem.
  * O UNION as apresenta como uma coisa só, que é como quem investiga pensa:
  * "o que mudou", não "em qual tabela foi gravado".
+ *
+ * O nome vem por JOIN porque as tabelas de auditoria guardam só o
+ * identificador. O LEFT é proposital: um totem excluído depois não pode apagar
+ * o registro do que ele fez — é justamente aí que a auditoria serve.
  */
 const BASE = `
-  SELECT a.id, 'totem' AS source, a.totem_config_id AS entity_id, a.totem_name AS entity_name,
+  SELECT a.id, 'totem' AS source, a.totem_config_id AS entity_id, t.totem_name AS entity_name,
          a.action, a.changed_fields, a.previous_values, a.new_values,
          a.performed_by, a.created_at
-  FROM nfce_totem_audit_log a
+  FROM nfce_totem_config_audit a
+  LEFT JOIN nfce_totem_config t ON t.id = a.totem_config_id
   UNION ALL
-  SELECT b.id, 'agent' AS source, b.agent_config_id AS entity_id, b.agent_name AS entity_name,
+  SELECT b.id, 'agent' AS source, b.agent_config_id AS entity_id, g.agent_name AS entity_name,
          b.action, b.changed_fields, b.previous_values, b.new_values,
          b.performed_by, b.created_at
-  FROM agent_audit_log b
+  FROM nfce_service_agent_audit b
+  LEFT JOIN nfce_service_agent g ON g.id = b.agent_config_id
 `;
 
 export class PostgresAuditRepository implements AuditRepository {

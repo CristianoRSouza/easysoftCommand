@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Pencil, TriangleAlert } from "lucide-react";
+import { Pencil, Plus, TriangleAlert } from "lucide-react";
 import { AgentDialog } from "./AgentDialog";
+import { NewAgentDialog } from "./NewAgentDialog";
 import {
   accumulatesWithoutSending,
   agentHealth,
@@ -100,6 +101,7 @@ function AgentCard({ agent, onEdit }: { agent: Agent; onEdit: () => void }) {
 export function AgentsPage() {
   const { agents } = useContainer();
   const [editando, setEditando] = useState<Agent | null>(null);
+  const [criando, setCriando] = useState(false);
   const { data, isPending, error } = useQuery<Agent[]>({
     queryKey: ["agents"],
     queryFn: () => agents.list(),
@@ -110,7 +112,15 @@ export function AgentsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Agentes de Serviço" count={lista.length} unit={["agente", "agentes"]} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PageHeader title="Agentes de Serviço" count={lista.length} unit={["agente", "agentes"]} />
+        <button
+          onClick={() => setCriando(true)}
+          className="flex items-center gap-1.5 rounded-lg bg-gradient-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          <Plus size={15} /> Novo agente
+        </button>
+      </div>
 
       {error && <ErrorNotice error={error} fallback="Não foi possível carregar os agentes." />}
 
@@ -135,6 +145,7 @@ export function AgentsPage() {
       )}
 
       {editando && <AgentDialog agent={editando} onClose={() => setEditando(null)} />}
+      {criando && <NewAgentDialog onClose={() => setCriando(false)} />}
     </div>
   );
 }

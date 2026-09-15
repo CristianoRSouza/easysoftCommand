@@ -1,5 +1,5 @@
 import type { AgentRepository, AgentUpdate } from "../application/agent-repository";
-import type { Agent } from "../domain/agent";
+import type { Agent, NewAgentDraft } from "../domain/agent";
 import type { ElectronApi } from "@/shared/runtime/electron-api";
 import { AGENT_COLUMNS, toAgent } from "./agent-mapper";
 
@@ -85,5 +85,57 @@ export class PostgresAgentRepository implements AgentRepository {
     if (result.rowCounts[0] === 0) {
       throw new Error("O agente não foi encontrado. Ele pode ter sido removido.");
     }
+  }
+
+  /**
+   * Cria o agente e registra a criação, na mesma transação.
+   *
+   * `RETURNING id` não serve aqui: a auditoria precisa do identificador e o
+   * canal de escrita devolve apenas quantas linhas cada comando afetou. Gerar
+   * o identificador antes resolve — e deixa os dois comandos independentes,
+   * que é o que permite aplicá-los juntos.
+   */
+  async create(draft: NewAgentDraft, performedBy: string): Promise<string> {
+    const id = crypto.randomUUID();
+
+    const result = await this.api.execute([
+      {
+        sql: `INSERT INTO nfce_service_agent
+                (id, agent_name, is_active, log_level, api_rate_limit,
+                 sefaz_timeout_ms, retry_max_attempts, retry_backoff_ms,
+                 contingency_enabled, contingency_reason, contingency_auto_transmit,
+                 contingency_worker_enabled, contingency_worker_interval_ms, updated_at)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10, ''), $11, $12, $13, NOW())`,
+        params: [
+          id,
+          draft.name,
+          draft.isActive,
+          draft.logLevel,
+          draft.apiRateLimit,
+          draft.timeoutMs,
+          draft.retryMaxAttempts,
+          draft.retryBackoffMs,
+          draft.contingencyEnabled,
+          draft.contingencyReason,
+          draft.contingencyAutoTransmit,
+          draft.contingencyWorkerEnabled,
+          draft.contingencyWorkerIntervalMs,
+        ],
+      },
+      {
+        sql: `INSERT INTO nfce_service_agent_audit
+                (agent_config_id, action, changed_fields, previous_values, new_values, performed_by)
+              VALUES ($1, 'created', $2, '{}'::jsonb, $3, $4)`,
+        params: [
+          id,
+          JSON.stringify(Object.keys(draft)),
+          JSON.stringify(draft),
+          performedBy,
+        ],
+      },
+    ]);
+
+    if (!result.ok) throw new Error(`Falha ao criar o agente: ${result.error}`);
+    return id;
   }
 }

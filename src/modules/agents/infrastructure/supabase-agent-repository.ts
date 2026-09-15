@@ -1,7 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AgentRepository, AgentUpdate } from "../application/agent-repository";
-import type { Agent } from "../domain/agent";
+import type { Agent, NewAgentDraft } from "../domain/agent";
 import type { Tenant } from "@/shared/tenant/tenant";
+import { asText } from "@/shared/infrastructure/convert";
 import { AGENT_COLUMNS, toAgent } from "./agent-mapper";
 
 /** Campo do formulário para coluna do banco. Nome fixo, nunca vindo da entrada. */
@@ -90,5 +91,52 @@ export class SupabaseAgentRepository implements AgentRepository {
     if (!data || data.length === 0) {
       throw new Error("O agente não foi encontrado nesta empresa.");
     }
+  }
+
+  async create(draft: NewAgentDraft, performedBy: string): Promise<string> {
+    const { data, error } = await this.client
+      .from("vw_nfce_service_agent")
+      .insert({
+        company_id: this.tenant.companyId,
+        agent_name: draft.name,
+        is_active: draft.isActive,
+        log_level: draft.logLevel,
+        api_rate_limit: draft.apiRateLimit,
+        sefaz_timeout_ms: draft.timeoutMs,
+        retry_max_attempts: draft.retryMaxAttempts,
+        retry_backoff_ms: draft.retryBackoffMs,
+        contingency_enabled: draft.contingencyEnabled,
+        contingency_reason: draft.contingencyReason || null,
+        contingency_auto_transmit: draft.contingencyAutoTransmit,
+        contingency_worker_enabled: draft.contingencyWorkerEnabled,
+        contingency_worker_interval_ms: draft.contingencyWorkerIntervalMs,
+      })
+      .select("id")
+      .single();
+
+    if (error) throw new Error(`Falha ao criar o agente: ${error.message}`);
+
+    const id = asText((data as Record<string, unknown>).id);
+    if (!id) throw new Error("O agente foi criado mas o identificador não voltou.");
+
+    // A auditoria vem depois porque depende do identificador. Se ela falhar, o
+    // agente existe sem registro de criação — ruído, não perda, e a alternativa
+    // (agente sem existir com registro dizendo que existe) seria pior.
+    const auditoria = await this.client.from("vw_nfce_service_agent_audit").insert({
+      agent_config_id: id,
+      company_id: this.tenant.companyId,
+      action: "created",
+      changed_fields: Object.keys(draft),
+      previous_values: {},
+      new_values: draft,
+      performed_by: performedBy,
+    });
+    if (auditoria.error) {
+      throw new Error(
+        `O agente foi criado, mas o registro de auditoria falhou: ${auditoria.error.message}`,
+      );
+    }
+
+    return id;
   }
 }
