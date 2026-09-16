@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Minus, ShieldAlert } from "lucide-react";
+import { Check, Minus, Pencil, ShieldAlert } from "lucide-react";
 import {
   hasInsecureTransport,
   isOperational,
   type PixCredentials,
 } from "../domain/pix-credentials";
+import { PixDialog } from "./PixDialog";
 import { useContainer } from "@/shared/container/container-context";
 import { formatDateTime } from "@/shared/ui/format";
 import { Badge, ErrorNotice, Loading, PageHeader, Panel } from "@/shared/ui/primitives";
@@ -28,6 +30,7 @@ function SecretRow({ label, present }: { label: string; present: boolean }) {
 
 export function PixPage() {
   const { pix } = useContainer();
+  const [editando, setEditando] = useState(false);
   const { data, isPending, error } = useQuery<PixCredentials | null>({
     queryKey: ["pixnopdv"],
     queryFn: () => pix.get(),
@@ -53,15 +56,24 @@ export function PixPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader title="PIXnoPDV" />
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Badge tone={data.enabled ? "success" : "muted"}>
             {data.enabled ? "Habilitado" : "Desabilitado"}
           </Badge>
           <Badge tone={operacional ? "success" : "warning"}>
             {operacional ? "Pronto para operar" : "Configuração incompleta"}
           </Badge>
+          <button
+            onClick={() => setEditando(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-secondary"
+          >
+            <Pencil size={14} />
+            Editar
+          </button>
         </div>
       </div>
+
+      {editando && <PixDialog credentials={data} onClose={() => setEditando(false)} />}
 
       {/* TLS inseguro aceita certificado inválido do provedor: serve para teste
           em rede local, mas em produção abre espaço para alguém no meio do
