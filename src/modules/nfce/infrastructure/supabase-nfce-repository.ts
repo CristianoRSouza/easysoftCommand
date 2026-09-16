@@ -14,7 +14,6 @@ import {
   type Page,
 } from "@/shared/domain/paging";
 import type { Tenant } from "@/shared/tenant/tenant";
-import type { FiscalContext } from "../domain/nfce-correction";
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 import type { NfceDetail } from "../domain/nfce-detail";
 import {
@@ -195,56 +194,5 @@ export class SupabaseNfceRepository implements NfceRepository {
       ]),
       authorizedXml: asText(nota.authorized_xml),
     };
-  }
-
-  async fiscalContext(noteId: string): Promise<FiscalContext | null> {
-    const [nota, emitente, destinatario] = await Promise.all([
-      this.client
-        .from("vw_nfce_notes")
-        .select("id")
-        .eq("store_id", this.tenant.storeId)
-        .eq("id", noteId)
-        .maybeSingle(),
-      this.client.from("vw_nfce_issuer").select("tax_regime_code, uf").eq("note_id", noteId).maybeSingle(),
-      this.client.from("vw_nfce_recipient").select("uf").eq("note_id", noteId).maybeSingle(),
-    ]);
-
-    if (!nota.data) return null;
-
-    const iss = (emitente.data ?? {}) as Record<string, unknown>;
-    const rec = (destinatario.data ?? {}) as Record<string, unknown>;
-    return {
-      taxRegimeCode: iss.tax_regime_code == null ? null : asNumber(iss.tax_regime_code),
-      issuerUf: (asText(iss.uf) ?? "").toUpperCase(),
-      recipientUf: (asText(rec.uf) ?? "").toUpperCase(),
-    };
-  }
-
-  async itemIcmsCodes(noteId: string): Promise<Map<number, string>> {
-    const { data, error } = await this.client
-      .from("vw_nfce_items")
-      .select("item_number, icms_cst, icms_csosn")
-      .eq("note_id", noteId);
-
-    if (error) throw new Error(`Falha ao ler os códigos de ICMS: ${error.message}`);
-
-    const mapa = new Map<number, string>();
-    for (const row of (data ?? []) as unknown as Record<string, unknown>[]) {
-      mapa.set(asNumber(row.item_number), asText(row.icms_cst) ?? asText(row.icms_csosn) ?? "");
-    }
-    return mapa;
-  }
-
-  /**
-   * A correção manual não existe pelo navegador.
-   *
-   * O projeto anterior também a restringe ao programa instalado, e há razão
-   * para isso: corrigir uma nota é ato fiscal feito por quem está na loja, com
-   * o documento em mãos. Fingir que funciona aqui seria pior que recusar.
-   */
-  async saveCorrection(): Promise<void> {
-    throw new Error(
-      "A correção manual de NFC-e é feita no programa instalado na loja, não pelo navegador.",
-    );
   }
 }
