@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { IssuerRepository } from "../application/issuer-repository";
 import type { NfceIssuer } from "../domain/nfce-issuer";
+import { toColumns, type IssuerDraft } from "../domain/issuer-draft";
 import type { Tenant } from "@/shared/tenant/tenant";
 import { asBoolean, asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 
@@ -124,5 +125,28 @@ export class SupabaseIssuerRepository implements IssuerRepository {
       },
       isActive: asBoolean(store.is_active),
     };
+  }
+
+  /**
+   * Grava o cadastro da loja — que é o emitente, na nuvem.
+   *
+   * O projeto anterior não tem este caminho: fora do programa instalado, a
+   * função de salvar o emitente devolve `{ ok: true }` sem escrever nada
+   * (`if (!isElectron()) return { ok: true };`). Quem edita pelo navegador vê
+   * a confirmação de sucesso, fecha a tela e perde a alteração — e só
+   * descobre na próxima vez que abrir, ou quando a nota sair com o dado
+   * antigo.
+   */
+  async update(draft: IssuerDraft): Promise<NfceIssuer> {
+    const { error } = await this.client
+      .from("pv_stores")
+      .update(toColumns(draft))
+      .eq("id", this.tenant.storeId);
+
+    if (error) throw new Error(`Falha ao salvar o emitente: ${error.message}`);
+
+    const salvo = await this.get();
+    if (!salvo) throw new Error("O emitente foi salvo mas não pôde ser lido de volta.");
+    return salvo;
   }
 }

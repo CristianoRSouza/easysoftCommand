@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Minus, ShieldAlert, ShieldCheck, TriangleAlert } from "lucide-react";
+import { Check, Minus, Pencil, ShieldAlert, ShieldCheck, TriangleAlert } from "lucide-react";
 import {
   certificateHealth,
   daysUntilExpiry,
@@ -7,6 +8,7 @@ import {
   type CertificateHealth,
   type NfceIssuer,
 } from "../domain/nfce-issuer";
+import { IssuerDialog } from "./IssuerDialog";
 import { useContainer } from "@/shared/container/container-context";
 import { formatDateTime } from "@/shared/ui/format";
 import { Badge, ErrorNotice, Loading, PageHeader, Panel } from "@/shared/ui/primitives";
@@ -100,6 +102,7 @@ function CertificateAlert({ issuer }: { issuer: NfceIssuer }) {
 
 export function IssuerPage() {
   const { issuer: repository } = useContainer();
+  const [editando, setEditando] = useState(false);
   const { data, isPending, error } = useQuery<NfceIssuer | null>({
     queryKey: ["issuer"],
     queryFn: () => repository.get(),
@@ -128,7 +131,7 @@ export function IssuerPage() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader title="Emitente NFC-e" />
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Badge tone={data.isActive ? "success" : "muted"}>
             {data.isActive ? "Ativo" : "Inativo"}
           </Badge>
@@ -137,8 +140,17 @@ export function IssuerPage() {
               {isProduction(fiscal) ? "Produção" : "Homologação"}
             </Badge>
           )}
+          <button
+            onClick={() => setEditando(true)}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-secondary"
+          >
+            <Pencil size={14} />
+            Editar
+          </button>
         </div>
       </div>
+
+      {editando && <IssuerDialog issuer={data} onClose={() => setEditando(false)} />}
 
       {/* O ambiente de homologação emite notas sem valor fiscal. Quem abre esta
           tela precisa ver isso antes de qualquer outro dado. */}
