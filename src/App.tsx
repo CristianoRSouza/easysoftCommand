@@ -14,12 +14,10 @@ import { NfcePage } from "@/modules/nfce/ui/NfcePage";
 import { NfceDetailPage } from "@/modules/nfce/ui/NfceDetailPage";
 import { IssuerPage } from "@/modules/issuer/ui/IssuerPage";
 import { TotemsPage } from "@/modules/totems/ui/TotemsPage";
-import { SyncPage } from "@/modules/sync/ui/SyncPage";
 import { RevenuePage } from "@/modules/revenue/ui/RevenuePage";
 import { AuditPage } from "@/modules/audit/ui/AuditPage";
 import { AgentsPage } from "@/modules/agents/ui/AgentsPage";
 import { PixPage } from "@/modules/pixnopdv/ui/PixPage";
-import { ServicesPage } from "@/modules/services/ui/ServicesPage";
 import { CloudQueuePage } from "@/modules/sync/ui/CloudQueuePage";
 import { ManualPage } from "@/pages/ManualPage";
 import { WizardPage } from "@/pages/WizardPage";
@@ -57,12 +55,10 @@ export default function App() {
                     <Route path="emitente" element={<IssuerPage />} />
                     <Route path="receitas" element={<RevenuePage />} />
                     <Route path="totens" element={<TotemsPage />} />
-                    <Route path="sincronizacao" element={<SyncPage />} />
                     <Route path="auditoria" element={<AuditPage />} />
                     <Route path="fila-nuvem" element={<CloudQueuePage />} />
                     <Route path="agentes" element={<AgentsPage />} />
                     <Route path="pixnopdv" element={<PixPage />} />
-                    <Route path="servicos" element={<ServicesPage />} />
                     <Route path="assistente" element={<WizardPage />} />
                     <Route path="primeiro-acesso" element={<BootstrapCodePage />} />
                     <Route path="manual" element={<ManualPage />} />

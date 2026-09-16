@@ -8,9 +8,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc -b",
-    "electron:dev": "electron .",
-    "package:win": "npm run build && electron-packager . easycommand --platform=win32 --arch=x64 --out=electron-release --overwrite --prune=true --ignore=\"^/src($|/)\" --ignore=\"^/docs($|/)\" --ignore=\"^/electron-release($|/)\" --ignore=\"^/\\.env$\""
+    "typecheck": "tsc -b"
   },
   "keywords": [],
   "author": "",
@@ -20,28 +18,23 @@
     "@supabase/supabase-js": "^2.109.0",
     "@tanstack/react-query": "^5.102.8",
     "clsx": "^2.1.1",
-    "dotenv": "^16.6.1",
     "lucide-react": "^0.469.0",
-    "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.18.3",
     "tailwind-merge": "^2.6.1"
   },
   "devDependencies": {
-    "@electron/packager": "^18.4.4",
     "@types/node": "^22.20.2",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^3.11.0",
     "autoprefixer": "^10.6.0",
-    "electron": "^33.4.11",
     "postcss": "^8.5.28",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
     "vite": "^5.4.21"
   },
   "type": "module",
-  "private": true,
-  "main": "electron/main.cjs"
+  "private": true
 }

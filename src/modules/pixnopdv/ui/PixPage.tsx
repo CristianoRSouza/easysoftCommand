@@ -41,7 +41,7 @@ export function PixPage() {
       <div className="space-y-5">
         <PageHeader title="PIXnoPDV" />
         <Panel className="px-4 py-12 text-center text-sm text-muted-foreground">
-          Esta loja ainda não configurou o PIXnoPDV.
+          O PIXnoPDV não está configurado nesta loja.
         </Panel>
       </div>
     );

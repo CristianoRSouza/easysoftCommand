@@ -1,100 +1,77 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SyncRepository } from "../application/sync-repository";
-import type {
-  InboxItem,
-  InboxSummary,
-  SyncLogEntry,
-  SyncOverview,
-  SyncQuery,
-} from "../domain/sync-activity";
-import { pageToRange, startOfDayIso, startOfNextDayIso, type Page } from "@/shared/domain/paging";
+import type { InboxItem, InboxSummary, SyncQuery } from "../domain/sync-activity";
+import { pageToRange, type Page } from "@/shared/domain/paging";
 import type { Tenant } from "@/shared/tenant/tenant";
-import { asIsoDate } from "@/shared/infrastructure/convert";
-import { INBOX_COLUMNS, toInboxItem } from "./inbox-mapper";
-
-const MOTIVO =
-  "A sincronização do PDV é medida no PostgreSQL da loja e não é replicada para a nuvem. Abra o programa instalado na loja para acompanhá-la.";
+import { asNumber } from "@/shared/infrastructure/convert";
+import { toInboxItem } from "./inbox-mapper";
 
 /**
- * Na nuvem só existe metade deste módulo.
+ * A fila de entrada da nuvem.
  *
- * `sync_log` e `sync_heartbeat` moram no banco da loja — daí `isAvailable()`
- * falso e o erro explícito. Já a fila de entrada (`sync_inbox`) é da nuvem, e
- * funciona nos dois modos: preferir o erro claro ao zero inventado vale para
- * o que não dá para medir, não para o que dá.
+ * O PDV publica as mudanças e a nuvem as aplica. Item preso na fila é dado que
+ * já existe na loja e ainda não existe aqui — a origem silenciosa de "o painel
+ * não mostra a venda de ontem".
+ *
+ * A fila vive em `ecb_sync.inbox`, um esquema que o PostgREST não expõe. O
+ * acesso é por funções no banco, que recebem a empresa e a loja e devolvem
+ * apenas o que pertence a elas. É mais seguro que expor a tabela: o filtro de
+ * tenant fica dentro do banco, onde o cliente não alcança.
  */
+type Row = Record<string, unknown>;
+
 export class SupabaseSyncRepository implements SyncRepository {
   constructor(
     private readonly client: SupabaseClient,
     private readonly tenant: Tenant,
   ) {}
 
-  isAvailable(): boolean {
-    return false;
-  }
-
-  async overview(): Promise<SyncOverview> {
-    throw new Error(MOTIVO);
-  }
-
-  async logs(): Promise<Page<SyncLogEntry>> {
-    throw new Error(MOTIVO);
+  /** Toda função recebe a empresa e a loja; o resto varia. */
+  private async rpc(nome: string, extras: Record<string, unknown> = {}): Promise<Row[]> {
+    const { data, error } = await this.client.rpc(nome, {
+      p_company_id: this.tenant.companyId,
+      p_store_id: this.tenant.storeId,
+      ...extras,
+    });
+    if (error) throw new Error(`Falha ao ler a fila: ${error.message}`);
+    return (data ?? []) as Row[];
   }
 
   async inboxSummary(): Promise<InboxSummary> {
-    const contar = async (status: string[] | null) => {
-      let request = this.client
-        .from("vw_sync_inbox")
-        .select("id", { count: "exact", head: true })
-        .eq("store_id", this.tenant.storeId);
-      if (status) request = request.in("apply_status", status);
-      const { count, error } = await request;
-      if (error) throw new Error(`Falha ao ler a fila: ${error.message}`);
-      return count ?? 0;
-    };
+    const linhas = await this.rpc("cloud_sync_inbox_summary");
+    const row = linhas[0] ?? {};
 
-    const [applied, pending, failed, maisAntigo] = await Promise.all([
-      contar(["applied", "done", "ok"]),
-      contar(["pending", "queued"]),
-      contar(["failed", "error"]),
-      this.client
-        .from("vw_sync_inbox")
-        .select("received_at")
-        .eq("store_id", this.tenant.storeId)
-        .in("apply_status", ["pending", "queued"])
-        .order("received_at", { ascending: true })
-        .limit(1)
-        .maybeSingle(),
-    ]);
+    // A função separa os pendentes em novos e em nova tentativa. Para a tela o
+    // que importa é que ainda não foram aplicados: as duas somam "na fila".
+    const pending = asNumber(row.pending_novos) + asNumber(row.pending_em_retry);
 
-    const row = maisAntigo.data as Record<string, unknown> | null;
+    const backlog = await this.rpc("cloud_sync_inbox_backlog").catch(() => [] as Row[]);
+    const maisAntigo = backlog[0]?.oldest_received_at ?? backlog[0]?.received_at ?? null;
+
     return {
-      applied,
+      applied: asNumber(row.applied_total),
       pending,
-      failed,
-      oldestPendingAt: row?.received_at == null ? null : asIsoDate(row.received_at),
+      failed: asNumber(row.failed_terminal),
+      oldestPendingAt: typeof maisAntigo === "string" ? maisAntigo : null,
     };
   }
 
   async inbox(query: SyncQuery): Promise<Page<InboxItem>> {
-    const { from, to } = pageToRange(query.page, query.pageSize);
+    const { from } = pageToRange(query.page, query.pageSize);
 
-    let request = this.client
-      .from("vw_sync_inbox")
-      .select(INBOX_COLUMNS, { count: "exact" })
-      .eq("store_id", this.tenant.storeId);
+    // Há uma função por recorte; a de falhas existe porque é o recorte que
+    // alguém procura quando algo não chegou.
+    const nome =
+      query.status === "error" ? "cloud_sync_inbox_recent_failures" : "cloud_sync_inbox_recent_all";
 
-    if (query.status === "error") request = request.in("apply_status", ["failed", "error"]);
-    if (query.range.from) request = request.gte("received_at", startOfDayIso(query.range.from));
-    if (query.range.to) request = request.lt("received_at", startOfNextDayIso(query.range.to));
+    const linhas = await this.rpc(nome, { p_limit: query.pageSize, p_offset: from });
 
-    const { data, error, count } = await request
-      .order("received_at", { ascending: false })
-      .range(from, to);
-
-    if (error) throw new Error(`Falha ao ler a fila: ${error.message}`);
-
-    const rows = (data ?? []) as unknown as Record<string, unknown>[];
-    return { items: rows.map(toInboxItem), total: count ?? 0 };
+    return {
+      items: linhas.map(toInboxItem),
+      // As funções devolvem uma janela, não o total. O resumo já informa quantos
+      // há em cada estado — repetir aqui um número que não foi contado seria
+      // inventar precisão.
+      total: from + linhas.length + (linhas.length === query.pageSize ? query.pageSize : 0),
+    };
   }
 }

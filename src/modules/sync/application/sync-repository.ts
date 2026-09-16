@@ -1,33 +1,18 @@
 import type { Page } from "@/shared/domain/paging";
-import type {
-  InboxItem,
-  InboxSummary,
-  SyncLogEntry,
-  SyncOverview,
-  SyncQuery,
-} from "../domain/sync-activity";
+import type { InboxItem, InboxSummary, SyncQuery } from "../domain/sync-activity";
 
 /**
- * Porta da sincronização.
+ * Porta da fila de sincronização.
  *
- * `isAvailable` existe porque este módulo genuinamente não tem como funcionar
- * na nuvem: `sync_log` e `sync_heartbeat` vivem só no PostgreSQL da loja e não
- * são replicados. No projeto anterior essa ausência virava constantes escritas
- * no código — erros sempre 0, serviços sempre nulos — e o painel apresentava
- * isso como medição. Declarar a indisponibilidade é mais honesto que exibir um
- * número que ninguém mediu.
+ * Só a fila de entrada sobreviveu. O painel de serviços — batimentos e
+ * registros do Sync-Service — lia `sync_heartbeat` e `sync_log`, tabelas que
+ * existem apenas no PostgreSQL da loja e não são replicadas. Com o programa
+ * instalado descontinuado, essa medição deixou de estar ao alcance do painel.
+ *
+ * Preferi remover a tela a mantê-la mostrando zeros: um painel que exibe
+ * "0 erros" sem ter medido nada é pior que um painel que não exibe.
  */
 export interface SyncRepository {
-  isAvailable(): boolean;
-  overview(): Promise<SyncOverview>;
-  logs(query: SyncQuery): Promise<Page<SyncLogEntry>>;
-
-  /**
-   * Fila de entrada da nuvem.
-   *
-   * Ao contrário de `logs` e `overview`, esta existe nos dois modos: a fila
-   * mora na nuvem, e o programa da loja também consegue consultá-la.
-   */
   inboxSummary(): Promise<InboxSummary>;
   inbox(query: SyncQuery): Promise<Page<InboxItem>>;
 }

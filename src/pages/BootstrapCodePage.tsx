@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from "react";
-import { Check, Copy, KeyRound, ShieldAlert } from "lucide-react";
+import { Check, Copy, KeyRound } from "lucide-react";
 import { supabase } from "@/shared/supabase/client";
-import { detectDataSource } from "@/shared/runtime/environment";
 import { formatDateTime } from "@/shared/ui/format";
 import { FIELD, PageHeader, Panel } from "@/shared/ui/primitives";
 
@@ -25,8 +24,6 @@ export function BootstrapCodePage() {
   const [codigo, setCodigo] = useState<Codigo | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
-
-  const naNuvem = detectDataSource() === "supabase";
 
   async function gerar(event: FormEvent) {
     event.preventDefault();
@@ -59,20 +56,6 @@ export function BootstrapCodePage() {
     setTimeout(() => setCopiado(false), 2000);
   }
 
-  if (!naNuvem) {
-    return (
-      <div className="space-y-5">
-        <PageHeader title="Código de primeiro acesso" />
-        <Panel className="flex items-start gap-3 p-5 text-sm text-muted-foreground">
-          <ShieldAlert size={18} className="mt-0.5 shrink-0 text-primary" />
-          <span>
-            O código é assinado pela nuvem e só pode ser gerado pelo navegador, com a conta do
-            administrador da loja autenticada.
-          </span>
-        </Panel>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-5">
