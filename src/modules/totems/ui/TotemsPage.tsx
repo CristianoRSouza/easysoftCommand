@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CreditCard, QrCode, TriangleAlert } from "lucide-react";
+import { CreditCard, Pencil, QrCode, TriangleAlert } from "lucide-react";
+import { TotemDialog } from "./TotemDialog";
 import {
   hasAnyPaymentMethod,
   licenseHealth,
@@ -38,7 +40,7 @@ function Method({ enabled, label, icon: Icon }: { enabled: boolean; label: strin
   );
 }
 
-function TotemCard({ totem }: { totem: Totem }) {
+function TotemCard({ totem, onEdit }: { totem: Totem; onEdit: () => void }) {
   const license = licenseHealth(totem.license);
   const semPagamento = !hasAnyPaymentMethod(totem.payments);
   // O modo do aplicativo e o ambiente fiscal deveriam concordar. Divergir é
@@ -64,6 +66,14 @@ function TotemCard({ totem }: { totem: Totem }) {
           </Badge>
           <Badge tone={MODE_TONE[totem.mode]}>{TOTEM_MODE_LABEL[totem.mode]}</Badge>
           {totem.license && <Badge tone={LICENSE[license].tone}>{LICENSE[license].label}</Badge>}
+          <button
+            onClick={onEdit}
+            title="Editar totem"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs transition-colors hover:bg-secondary"
+          >
+            <Pencil size={13} />
+            Editar
+          </button>
         </div>
       </div>
 
@@ -142,6 +152,7 @@ function TotemCard({ totem }: { totem: Totem }) {
 
 export function TotemsPage() {
   const { totems } = useContainer();
+  const [editando, setEditando] = useState<Totem | null>(null);
   const { data, isPending, error } = useQuery<Totem[]>({
     queryKey: ["totems"],
     queryFn: () => totems.list(),
@@ -169,11 +180,13 @@ export function TotemsPage() {
           </p>
           <div className="grid gap-4 lg:grid-cols-2">
             {lista.map((totem) => (
-              <TotemCard key={totem.id} totem={totem} />
+              <TotemCard key={totem.id} totem={totem} onEdit={() => setEditando(totem)} />
             ))}
           </div>
         </>
       )}
+
+      {editando && <TotemDialog totem={editando} onClose={() => setEditando(null)} />}
     </div>
   );
 }

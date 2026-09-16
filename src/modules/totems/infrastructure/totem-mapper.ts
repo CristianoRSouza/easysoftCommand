@@ -23,6 +23,18 @@ export const TOTEM_COLUMNS_CLOUD = [
   "aditum_partner_token_encrypted, aditum_activation_code_encrypted",
 ].join(", ");
 
+/**
+ * Para comparar antes e depois de uma gravação.
+ *
+ * Inclui os identificadores de chave, que a tela não usa: sem eles, toda
+ * gravação apareceria na auditoria como se o `_kid` tivesse mudado, porque o
+ * valor anterior nunca teria sido lido.
+ */
+export const TOTEM_COLUMNS_FOR_DIFF = [
+  TOTEM_COLUMNS_CLOUD,
+  "aditum_partner_token_kid, aditum_activation_code_kid",
+].join(", ");
+
 /** `true` quando a coluna tem conteúdo — é o que a tela precisa saber. */
 function preenchido(value: unknown): boolean {
   return value != null && String(value).trim() !== "";

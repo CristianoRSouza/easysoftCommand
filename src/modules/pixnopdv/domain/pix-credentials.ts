@@ -32,22 +32,10 @@ export function hasInsecureTransport(credentials: PixCredentials): boolean {
   return credentials.insecureTls;
 }
 
-/**
- * O que fazer com um segredo que a tela não mostra.
- *
- * Quem edita a tela não vê o token atual, então um campo vazio é ambíguo:
- * pode significar "não mexi" ou "quero apagar". O projeto anterior resolvia
- * isso pela presença da chave no objeto enviado — uma diferença invisível
- * entre `{}` e `{ basic_token: null }`, fácil de errar sem perceber.
- *
- * Aqui a intenção é declarada.
- */
-export type SecretEdit =
-  | { readonly action: "keep" }
-  | { readonly action: "clear" }
-  | { readonly action: "set"; readonly value: string };
+import { textOrNull, urlOrNull } from "@/shared/domain/text";
+import type { SecretEdit } from "@/shared/domain/secret-edit";
 
-export const KEEP_SECRET: SecretEdit = { action: "keep" };
+export { KEEP_SECRET, secretToColumn, type SecretEdit } from "@/shared/domain/secret-edit";
 
 /** O que a tela envia para gravar. */
 export interface PixCredentialsDraft {
@@ -58,18 +46,6 @@ export interface PixCredentialsDraft {
   secretKey: SecretEdit;
   insecureTls: boolean;
   enabled: boolean;
-}
-
-function textoOuNulo(value: string | null | undefined): string | null {
-  if (value == null) return null;
-  const limpo = value.trim();
-  return limpo === "" ? null : limpo;
-}
-
-/** URL sem barras no fim, para não gerar `.../api//cobranca` ao concatenar. */
-function urlOuNulo(value: string | null | undefined): string | null {
-  const limpo = textoOuNulo(value);
-  return limpo ? limpo.replace(/\/+$/, "") : null;
 }
 
 /**
@@ -88,19 +64,9 @@ export function normalizeDraft(draft: PixCredentialsDraft): {
 } {
   return {
     environment: draft.environment,
-    api_base_url: urlOuNulo(draft.apiBaseUrl),
-    basic_user: textoOuNulo(draft.basicUser),
+    api_base_url: urlOrNull(draft.apiBaseUrl),
+    basic_user: textOrNull(draft.basicUser),
     insecure_tls: draft.insecureTls,
     enabled: draft.enabled,
   };
-}
-
-/**
- * Traduz a intenção em valor de coluna. `undefined` significa "não incluir no
- * UPDATE" — é o que preserva o segredo atual sem precisar lê-lo.
- */
-export function secretToColumn(edit: SecretEdit): string | null | undefined {
-  if (edit.action === "keep") return undefined;
-  if (edit.action === "clear") return null;
-  return textoOuNulo(edit.value);
 }
