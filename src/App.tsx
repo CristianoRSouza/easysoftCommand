@@ -1,9 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Route, Routes } from "react-router-dom";
-import { SessionProvider } from "@/shared/auth/auth-context";
-import { RequireSession } from "@/shared/auth/RequireSession";
-import { TenantProvider } from "@/shared/tenant/tenant-context";
-import { ContainerProvider } from "@/shared/container/container-context";
+import { AppProviders } from "@/shared/providers/AppProviders";
 import { AppLayout } from "@/shared/ui/AppLayout";
 import { DashboardPage } from "@/modules/dashboard/ui/DashboardPage";
 import { ProductsPage } from "@/modules/products/ui/ProductsPage";
@@ -41,38 +38,32 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        <RequireSession>
-          <TenantProvider>
-            <ContainerProvider>
-              <HashRouter>
-                <Routes>
-                  <Route element={<AppLayout />}>
-                    <Route index element={<DashboardPage />} />
-                    <Route path="comandas" element={<OrdersPage />} />
-                    <Route path="transacoes" element={<TransactionsPage />} />
-                    <Route path="nfce" element={<NfcePage />} />
-                    <Route path="nfce/:noteId" element={<NfceDetailPage />} />
-                    <Route path="produtos" element={<ProductsPage />} />
-                    <Route path="unidades" element={<UnitsPage />} />
-                    <Route path="emitente" element={<IssuerPage />} />
-                    <Route path="receitas" element={<RevenuePage />} />
-                    <Route path="totens" element={<TotemsPage />} />
-                    <Route path="auditoria" element={<AuditPage />} />
-                    <Route path="fila-nuvem" element={<CloudQueuePage />} />
-                    <Route path="agentes" element={<AgentsPage />} />
-                    <Route path="pixnopdv" element={<PixPage />} />
-                    <Route path="assistente" element={<WizardPage />} />
-                    <Route path="primeiro-acesso" element={<BootstrapCodePage />} />
-                    <Route path="manual" element={<ManualPage />} />
-                    <Route path="*" element={<NotFoundPage />} />
-                  </Route>
-                </Routes>
-              </HashRouter>
-            </ContainerProvider>
-          </TenantProvider>
-        </RequireSession>
-      </SessionProvider>
+      <AppProviders>
+        <HashRouter>
+          <Routes>
+            <Route element={<AppLayout />}>
+              <Route index element={<DashboardPage />} />
+              <Route path="comandas" element={<OrdersPage />} />
+              <Route path="transacoes" element={<TransactionsPage />} />
+              <Route path="nfce" element={<NfcePage />} />
+              <Route path="nfce/:noteId" element={<NfceDetailPage />} />
+              <Route path="produtos" element={<ProductsPage />} />
+              <Route path="unidades" element={<UnitsPage />} />
+              <Route path="emitente" element={<IssuerPage />} />
+              <Route path="receitas" element={<RevenuePage />} />
+              <Route path="totens" element={<TotemsPage />} />
+              <Route path="auditoria" element={<AuditPage />} />
+              <Route path="fila-nuvem" element={<CloudQueuePage />} />
+              <Route path="agentes" element={<AgentsPage />} />
+              <Route path="pixnopdv" element={<PixPage />} />
+              <Route path="assistente" element={<WizardPage />} />
+              <Route path="primeiro-acesso" element={<BootstrapCodePage />} />
+              <Route path="manual" element={<ManualPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Route>
+          </Routes>
+        </HashRouter>
+      </AppProviders>
     </QueryClientProvider>
   );
 }

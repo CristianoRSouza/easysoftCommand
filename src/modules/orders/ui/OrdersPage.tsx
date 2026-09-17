@@ -11,6 +11,7 @@ import {
 } from "../domain/order";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
+import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
 import { formatDateTime } from "@/shared/ui/format";
 import {
   Badge,
@@ -34,9 +35,13 @@ export function OrdersPage() {
   const { orders } = useContainer();
   const [query, setQuery] = useState<OrderQuery>(DEFAULT_ORDER_QUERY);
 
+  // Período além do plano não é consultado: o aviso substitui o resultado.
+  const foraDoPlano = useOutsidePlanWindow(query.range);
+
   const { data, isPending, error } = useQuery<Page<Order>>({
     queryKey: ["orders", query],
     queryFn: () => orders.list(query),
+    enabled: !foraDoPlano,
     placeholderData: (previous) => previous,
   });
 
@@ -110,7 +115,13 @@ export function OrdersPage() {
 
       {error && <ErrorNotice error={error} fallback="Não foi possível carregar as comandas." />}
 
-      {isPending ? (
+      {foraDoPlano ? (
+        <PlanWindowNotice
+          range={query.range}
+          subject="comandas"
+          onAdjust={(range) => patch({ range, page: 1 })}
+        />
+      ) : isPending ? (
         <Loading label="Carregando comandas..." />
       ) : (data?.items.length ?? 0) === 0 ? (
         <Empty label="Nenhuma comanda encontrada com os filtros atuais." />
@@ -165,11 +176,13 @@ export function OrdersPage() {
         </Panel>
       )}
 
-      <Pagination
-        page={query.page}
-        lastPage={lastPageOf(total, query.pageSize)}
-        onChange={(page) => patch({ page })}
-      />
+      {!foraDoPlano && (
+        <Pagination
+          page={query.page}
+          lastPage={lastPageOf(total, query.pageSize)}
+          onChange={(page) => patch({ page })}
+        />
+      )}
     </div>
   );
 }

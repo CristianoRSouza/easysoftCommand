@@ -18,11 +18,19 @@ import {
   BookOpen,
   type LucideIcon,
 } from "lucide-react";
+import {
+  canIssueBootstrapCodes,
+  canViewAuditLogs,
+  type AccessProfile,
+} from "@/shared/access/access";
+import { useAccess } from "@/shared/access/access-context";
 
 interface Item {
   to: string;
   label: string;
   icon: LucideIcon;
+  /** Quando existe, o item só aparece para quem o perfil permite. */
+  requires?: (profile: AccessProfile) => boolean;
 }
 
 /**
@@ -60,20 +68,34 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { to: "/fila-nuvem", label: "Fila da nuvem", icon: CloudUpload },
       { to: "/agentes", label: "Agentes de Serviço", icon: Cpu },
       { to: "/pixnopdv", label: "PIXnoPDV", icon: QrCode },
-      { to: "/auditoria", label: "Auditoria", icon: ScrollText },
+      { to: "/auditoria", label: "Auditoria", icon: ScrollText, requires: canViewAuditLogs },
     ],
   },
   {
     title: "Ajuda",
     items: [
       { to: "/assistente", label: "Assistente", icon: Wand2 },
-      { to: "/primeiro-acesso", label: "Primeiro acesso", icon: KeyRound },
+      {
+        to: "/primeiro-acesso",
+        label: "Primeiro acesso",
+        icon: KeyRound,
+        requires: canIssueBootstrapCodes,
+      },
       { to: "/manual", label: "Manual", icon: BookOpen },
     ],
   },
 ];
 
 export function Sidebar() {
+  const { profile } = useAccess();
+
+  // Grupo sem item visível não aparece — um título sozinho faria a pessoa
+  // procurar o que foi escondido dela.
+  const grupos = GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.requires || item.requires(profile)),
+  })).filter((group) => group.items.length > 0);
+
   return (
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
       <div className="px-5 py-5">
@@ -84,7 +106,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-6">
-        {GROUPS.map((group) => (
+        {grupos.map((group) => (
           <div key={group.title}>
             <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               {group.title}

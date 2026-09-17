@@ -4,6 +4,7 @@ import { paymentMethodLabel } from "@/modules/transactions/domain/transaction";
 import type { RevenueReport } from "../domain/revenue";
 import { useContainer } from "@/shared/container/container-context";
 import type { DateRange } from "@/shared/domain/paging";
+import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
 import { formatCurrency } from "@/shared/ui/format";
 import { Empty, ErrorNotice, FIELD, Loading, PageHeader, Panel } from "@/shared/ui/primitives";
 
@@ -31,9 +32,13 @@ export function RevenuePage() {
   const { revenue } = useContainer();
   const [range, setRange] = useState<DateRange>(defaultRange);
 
+  // Período além do plano não é consultado: o aviso substitui o resultado.
+  const foraDoPlano = useOutsidePlanWindow(range);
+
   const { data, isPending, error } = useQuery<RevenueReport>({
     queryKey: ["revenue", range],
     queryFn: () => revenue.report(range),
+    enabled: !foraDoPlano,
   });
 
   return (
@@ -59,7 +64,9 @@ export function RevenuePage() {
 
       {error && <ErrorNotice error={error} fallback="Não foi possível somar a receita." />}
 
-      {isPending ? (
+      {foraDoPlano ? (
+        <PlanWindowNotice range={range} subject="receitas" onAdjust={setRange} />
+      ) : isPending ? (
         <Loading label="Somando o período..." />
       ) : !data || data.total.count === 0 ? (
         <Empty label="Nenhuma transação aprovada no período." />

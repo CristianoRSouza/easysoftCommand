@@ -15,6 +15,7 @@ import {
 } from "../domain/nfce-note";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
+import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
 import { formatCurrency, formatDateTime } from "@/shared/ui/format";
 import {
   Badge,
@@ -67,9 +68,13 @@ export function NfcePage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState<NfceQuery>(DEFAULT_NFCE_QUERY);
 
+  // Período além do plano não é consultado: o aviso substitui o resultado.
+  const foraDoPlano = useOutsidePlanWindow(query.range);
+
   const lista = useQuery<Page<NfceNote>>({
     queryKey: ["nfce", "lista", query],
     queryFn: () => nfce.list(query),
+    enabled: !foraDoPlano,
     placeholderData: (previous) => previous,
   });
 
@@ -79,6 +84,7 @@ export function NfcePage() {
   const totais = useQuery<NfceTotals>({
     queryKey: ["nfce", "totais", query.status, query.range, query.search],
     queryFn: () => nfce.totals(query),
+    enabled: !foraDoPlano,
   });
 
   const patch = (next: Partial<NfceQuery>) =>
@@ -166,7 +172,13 @@ export function NfcePage() {
         <ErrorNotice error={totais.error} fallback="Não foi possível somar o período." />
       )}
 
-      {lista.isPending ? (
+      {foraDoPlano ? (
+        <PlanWindowNotice
+          range={query.range}
+          subject="NFC-e"
+          onAdjust={(range) => patch({ range, page: 1 })}
+        />
+      ) : lista.isPending ? (
         <Loading label="Carregando notas..." />
       ) : (lista.data?.items.length ?? 0) === 0 ? (
         <Empty label="Nenhuma nota encontrada com os filtros atuais." />
@@ -233,11 +245,13 @@ export function NfcePage() {
         </Panel>
       )}
 
-      <Pagination
-        page={query.page}
-        lastPage={lastPageOf(total, query.pageSize)}
-        onChange={(page) => patch({ page })}
-      />
+      {!foraDoPlano && (
+        <Pagination
+          page={query.page}
+          lastPage={lastPageOf(total, query.pageSize)}
+          onChange={(page) => patch({ page })}
+        />
+      )}
     </div>
   );
 }

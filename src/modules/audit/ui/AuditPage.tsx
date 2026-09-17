@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight, Search, ShieldAlert } from "lucide-react";
+import { canViewAuditLogs } from "@/shared/access/access";
+import { useAccess } from "@/shared/access/access-context";
 import {
   ACTION_LABEL,
   DEFAULT_AUDIT_QUERY,
@@ -65,13 +67,36 @@ function EntryRow({ entry }: { entry: AuditEntry }) {
 
 export function AuditPage() {
   const { audit } = useContainer();
+  const { profile, loading: carregandoPerfil } = useAccess();
   const [query, setQuery] = useState<AuditQuery>(DEFAULT_AUDIT_QUERY);
+
+  const permitido = canViewAuditLogs(profile);
 
   const { data, isPending, error } = useQuery<Page<AuditEntry>>({
     queryKey: ["audit", query],
     queryFn: () => audit.list(query),
+    // Sem permissão nem se consulta: o banco devolveria lista vazia, e uma
+    // tela vazia sem explicação parece defeito.
+    enabled: permitido,
     placeholderData: (previous) => previous,
   });
+
+  if (carregandoPerfil) return <Loading label="Verificando o acesso..." />;
+
+  if (!permitido) {
+    return (
+      <div className="space-y-5">
+        <PageHeader title="Auditoria" />
+        <Panel className="flex flex-col items-center gap-3 px-6 py-14 text-center">
+          <ShieldAlert size={32} className="text-muted-foreground" />
+          <p className="font-medium">Acesso restrito</p>
+          <p className="text-sm text-muted-foreground">
+            A trilha de auditoria está disponível apenas para administradores do sistema.
+          </p>
+        </Panel>
+      </div>
+    );
+  }
 
   const patch = (next: Partial<AuditQuery>) => setQuery((c) => ({ ...c, ...next }));
   const total = data?.total ?? 0;

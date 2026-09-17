@@ -12,6 +12,7 @@ import {
 } from "../domain/transaction";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
+import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
 import { formatCurrency, formatDateTime } from "@/shared/ui/format";
 import {
   Badge,
@@ -29,9 +30,13 @@ export function TransactionsPage() {
   const { transactions } = useContainer();
   const [query, setQuery] = useState<TransactionQuery>(DEFAULT_TRANSACTION_QUERY);
 
+  // Período além do plano não é consultado: o aviso substitui o resultado.
+  const foraDoPlano = useOutsidePlanWindow(query.range);
+
   const { data, isPending, error } = useQuery<Page<Transaction>>({
     queryKey: ["transactions", query],
     queryFn: () => transactions.list(query),
+    enabled: !foraDoPlano,
     placeholderData: (previous) => previous,
   });
 
@@ -112,7 +117,13 @@ export function TransactionsPage() {
 
       {error && <ErrorNotice error={error} fallback="Não foi possível carregar as transações." />}
 
-      {isPending ? (
+      {foraDoPlano ? (
+        <PlanWindowNotice
+          range={query.range}
+          subject="transações"
+          onAdjust={(range) => patch({ range, page: 1 })}
+        />
+      ) : isPending ? (
         <Loading label="Carregando transações..." />
       ) : (data?.items.length ?? 0) === 0 ? (
         <Empty label="Nenhuma transação encontrada com os filtros atuais." />
@@ -171,11 +182,13 @@ export function TransactionsPage() {
         </>
       )}
 
-      <Pagination
-        page={query.page}
-        lastPage={lastPageOf(total, query.pageSize)}
-        onChange={(page) => patch({ page })}
-      />
+      {!foraDoPlano && (
+        <Pagination
+          page={query.page}
+          lastPage={lastPageOf(total, query.pageSize)}
+          onChange={(page) => patch({ page })}
+        />
+      )}
     </div>
   );
 }
