@@ -1,16 +1,18 @@
 import { useState, type FormEvent } from "react";
 import { ArrowLeft, MailCheck } from "lucide-react";
-import { supabase } from "@/shared/supabase/client";
+import { useSession } from "./auth-context";
 import { FIELD } from "@/shared/ui/primitives";
 
 /**
- * Recuperação de senha.
+ * Pedido do e-mail de recuperação de senha.
  *
- * Fala direto com o Supabase Auth, sem passar por repositório: não é dado de
- * negócio, é autenticação — e a conta existe na nuvem mesmo quando o painel
- * roda local.
+ * O e-mail sai pela função `send-recovery-email`, como no sistema em
+ * produção, e não pelo envio padrão do Supabase: é ela que monta o link para
+ * o domínio do painel, com a marca da EasySoft, sem o limite de poucos
+ * e-mails por hora do SMTP embutido.
  */
 export function RecoverPasswordPage({ onBack }: { onBack: () => void }) {
+  const { requestPasswordReset } = useSession();
   const [email, setEmail] = useState("");
   const [enviado, setEnviado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -21,10 +23,7 @@ export function RecoverPasswordPage({ onBack }: { onBack: () => void }) {
     setErro(null);
     setEnviando(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${window.location.origin}${window.location.pathname}#/redefinir-senha`,
-      });
-      if (error) throw new Error(error.message);
+      await requestPasswordReset(email);
       setEnviado(true);
     } catch (causa) {
       setErro(causa instanceof Error ? causa.message : "Não foi possível enviar o e-mail.");

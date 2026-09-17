@@ -22,6 +22,7 @@ import { CloudQueuePage } from "@/modules/sync/ui/CloudQueuePage";
 import { ManualPage } from "@/pages/ManualPage";
 import { WizardPage } from "@/pages/WizardPage";
 import { BootstrapCodePage } from "@/pages/BootstrapCodePage";
+import { NotFoundPage } from "@/pages/NotFoundPage";
 
 // `staleTime` evita refazer a consulta a cada foco de janela — num painel
 // administrativo os dados não mudam de segundo a segundo.
@@ -32,8 +33,10 @@ const queryClient = new QueryClient({
 });
 
 /**
- * `HashRouter` e não `BrowserRouter`: empacotado, o Electron carrega a
- * aplicação pelo sistema de arquivos, onde rotas por caminho não resolvem.
+ * `HashRouter` veio do tempo do Electron, que abria a aplicação pelo sistema
+ * de arquivos. Ficou porque a troca muda todos os endereços e a migração para
+ * Next.js vai refazer o roteamento de qualquer forma. O link de recuperação de
+ * senha não depende dele: o token chega na query e é lido antes das rotas.
  */
 export default function App() {
   return (
@@ -62,6 +65,7 @@ export default function App() {
                     <Route path="assistente" element={<WizardPage />} />
                     <Route path="primeiro-acesso" element={<BootstrapCodePage />} />
                     <Route path="manual" element={<ManualPage />} />
+                    <Route path="*" element={<NotFoundPage />} />
                   </Route>
                 </Routes>
               </HashRouter>
