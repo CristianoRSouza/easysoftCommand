@@ -15,7 +15,9 @@ Verificado contra o Supabase de produção:
 - não existe Edge Function fiscal — as oito publicadas são de cobrança,
   sessão, recuperação de senha, SSO, relatório de erro e cifragem de segredos
   de totem;
-- a view `vw_nfce_items` **aceita** gravação (PATCH devolve 204).
+- a view `vw_nfce_items` **aceita** gravação (PATCH devolve 204);
+- a fila que vai da nuvem para a loja existe, mas só carrega contas de acesso
+  (detalhe abaixo).
 
 Esse último ponto é a armadilha. Dá para gravar a correção na cópia da nuvem.
 O resultado seria uma nota **parecendo** corrigida no painel e continuando
@@ -25,16 +27,41 @@ recebeu.
 
 Por isso o painel informa a situação e não oferece o botão.
 
+## O canal nuvem → loja existe, mas não carrega isto
+
+Correção de uma versão anterior deste documento, que dizia não existir fila da
+nuvem para a loja. Existe: `ecb_sync.outbox`, no Supabase, com os mesmos
+estados do outbox da loja (`pending`, `dispatched`, `failed`).
+
+O que ele carrega hoje, verificado nesta empresa:
+
+| Entidade | Despachados | Pendentes |
+|---|---|---|
+| `public.admin_users` | 5 | 1 |
+| `public.admin_user_roles` | 5 | 1 |
+
+São contas de acesso e papéis — nada fiscal. E os dois pendentes estão parados
+desde **04/08/2026**, o que sugere que o consumo dessa fila nesta loja não está
+correndo.
+
+Ou seja: o mecanismo existe, ninguém o usa para documento fiscal, e ele não
+está fluindo aqui.
+
 ## O que falta para habilitar
 
-Uma das duas:
+Três peças, e nenhuma é de tela:
 
-1. Uma Edge Function que grave a correção e enfileire o reprocessamento para o
-   serviço fiscal da loja consumir; ou
-2. Uma fila nuvem → loja (a que existe hoje é loja → nuvem).
+1. **Gravar a correção com validação no servidor** — uma Edge Function que
+   aplique as regras abaixo e grave numa transação só. Validação no navegador
+   é conveniência para quem digita, nunca garantia.
+2. **Enfileirar o evento para a loja** — usar o `ecb_sync.outbox` da nuvem com
+   uma entidade da NFC-e, que hoje ele não conhece.
+3. **Fazer o serviço fiscal da loja reprocessar** — aplicar o evento no
+   PostgreSQL local e recolocar a nota na fila de transmissão, que é o que o
+   programa instalado faz hoje ao mudar o estado da nota.
 
-Qualquer uma das duas precisa aplicar as regras abaixo **no servidor**.
-Validação no navegador é conveniência para quem digita, nunca garantia.
+Sem a terceira, as duas primeiras só mudam a cópia da nuvem — e a nota segue
+rejeitada na SEFAZ.
 
 ## Regras
 
