@@ -10,15 +10,10 @@ import {
 import { csvFileName, toCsv } from "../domain/revenue-csv";
 import { METHOD_COLOR } from "./charts";
 import { useContainer } from "@/shared/container/container-context";
-import {
-  DATE_PRESETS,
-  DATE_PRESET_LABEL,
-  matchingPreset,
-  presetRange,
-  type DatePreset,
-} from "@/shared/domain/date-presets";
+import { presetRange } from "@/shared/domain/date-presets";
 import type { DateRange } from "@/shared/domain/paging";
 import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
+import { DatePresets } from "@/shared/ui/DatePresets";
 import { formatCurrency, formatDateTime } from "@/shared/ui/format";
 import { Empty, ErrorNotice, FIELD, Loading, PageHeader, Panel } from "@/shared/ui/primitives";
 
@@ -80,31 +75,12 @@ export function RevenuePage() {
     setVisiveis(PAGINA);
   }
 
-  const presetAtual = matchingPreset(range);
-
   return (
     <div className="space-y-5">
       <PageHeader title="Receitas" />
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex flex-wrap gap-2">
-          {DATE_PRESETS.map((preset: DatePreset) => {
-            const ativo = presetAtual === preset;
-            return (
-              <button
-                key={preset}
-                onClick={() => trocarPeriodo(presetRange(preset))}
-                className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                  ativo
-                    ? "bg-gradient-primary font-medium text-primary-foreground"
-                    : "border border-border hover:bg-secondary"
-                }`}
-              >
-                {DATE_PRESET_LABEL[preset]}
-              </button>
-            );
-          })}
-        </div>
+        <DatePresets range={range} onChange={trocarPeriodo} />
 
         <div className="flex items-center gap-2">
           <label className="text-sm text-muted-foreground">De</label>

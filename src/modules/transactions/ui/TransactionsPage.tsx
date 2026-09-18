@@ -14,6 +14,7 @@ import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
 import { TransactionDialog } from "./TransactionDialog";
 import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
+import { DatePresets } from "@/shared/ui/DatePresets";
 import { formatCurrency, formatDateTime } from "@/shared/ui/format";
 import {
   Badge,
@@ -100,6 +101,8 @@ export function TransactionsPage() {
           <option value="pix">PIX</option>
           <option value="voucher">Voucher</option>
         </select>
+
+        <DatePresets range={query.range} onChange={(range) => patch({ range, page: 1 })} />
 
         <input
           type="date"

@@ -13,6 +13,7 @@ import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
 import { OrderDialog } from "./OrderDialog";
 import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
+import { DatePresets } from "@/shared/ui/DatePresets";
 import { formatDateTime } from "@/shared/ui/format";
 import {
   Badge,
@@ -88,6 +89,8 @@ export function OrdersPage() {
           <option value="closed">Fechadas</option>
           <option value="cancelled">Canceladas</option>
         </select>
+
+        <DatePresets range={query.range} onChange={(range) => patch({ range, page: 1 })} />
 
         <input
           type="date"
