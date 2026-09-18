@@ -97,6 +97,9 @@ export function buildChanges(
 export interface AuditQuery {
   search: string;
   source: "all" | AuditSource;
+  /** Filtra o histórico de um equipamento só — usado pela tela dele. */
+  entityId: string | null;
+  action: "all" | AuditAction;
   range: DateRange;
   page: number;
   pageSize: number;
@@ -105,6 +108,8 @@ export interface AuditQuery {
 export const DEFAULT_AUDIT_QUERY: AuditQuery = {
   search: "",
   source: "all",
+  entityId: null,
+  action: "all",
   range: { from: null, to: null },
   page: 1,
   pageSize: 50,

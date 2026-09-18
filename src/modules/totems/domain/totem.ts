@@ -1,3 +1,10 @@
+import type {
+  ImageServer,
+  PaymentEnvironment,
+  PrinterSettings,
+  TefRuntime,
+} from "./totem-settings";
+
 /**
  * Totem de autoatendimento — o terminal em que o cliente paga a comanda.
  *
@@ -10,9 +17,14 @@ export interface Totem {
   name: string;
   isActive: boolean;
   mode: TotemMode;
+  /** Ambiente de PIX e TEF, separado do modo do aplicativo e do fiscal. */
+  paymentEnvironment: PaymentEnvironment;
   fiscal: TotemFiscalSettings;
   payments: TotemPaymentMethods;
   integrations: TotemIntegrations;
+  tef: TefRuntime;
+  images: ImageServer;
+  printer: PrinterSettings;
   license: TotemLicense | null;
 }
 
@@ -79,6 +91,7 @@ export function hasAnyPaymentMethod(payments: TotemPaymentMethods): boolean {
 export interface TotemIntegrations {
   nfceServiceApiKey: boolean;
   tefApiKey: boolean;
+  pixApiKey: boolean;
   aditumPartnerToken: boolean;
   aditumActivationCode: boolean;
   tefBaseUrl: string | null;

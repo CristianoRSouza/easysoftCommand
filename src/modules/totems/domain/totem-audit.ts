@@ -13,7 +13,7 @@ export interface TotemAuditEntry {
   newValues: Record<string, unknown>;
 }
 
-export type TotemAuditAction = "created" | "updated";
+export type TotemAuditAction = "created" | "updated" | "toggled";
 
 /** Comparação por valor: `null` e ausente são a mesma coisa vinda do banco. */
 function sameValue(a: unknown, b: unknown): boolean {

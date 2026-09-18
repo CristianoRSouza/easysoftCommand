@@ -49,6 +49,10 @@ export class SupabaseAuditRepository implements AuditRepository {
 
     if (query.range.from) request = request.gte("created_at", startOfDayIso(query.range.from));
     if (query.range.to) request = request.lt("created_at", startOfNextDayIso(query.range.to));
+    // O histórico de um equipamento só: filtrado no banco, e não depois, para
+    // que o limite por origem não corte justamente as linhas procuradas.
+    if (query.entityId) request = request.eq(entityColumn, query.entityId);
+    if (query.action !== "all") request = request.eq("action", query.action);
 
     const { data, error } = await request
       .order("created_at", { ascending: false })

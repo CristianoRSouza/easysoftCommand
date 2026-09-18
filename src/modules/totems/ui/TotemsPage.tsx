@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { CreditCard, Pencil, QrCode, TriangleAlert } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CreditCard, History, Pencil, Plus, Power, QrCode, TriangleAlert } from "lucide-react";
 import { TotemDialog } from "./TotemDialog";
+import { TotemHistoryDialog } from "./TotemHistoryDialog";
 import {
   hasAnyPaymentMethod,
   licenseHealth,
@@ -11,6 +12,7 @@ import {
   type Totem,
 } from "../domain/totem";
 import { useContainer } from "@/shared/container/container-context";
+import { useSession } from "@/shared/auth/auth-context";
 import { formatDateTime } from "@/shared/ui/format";
 import { Badge, Empty, ErrorNotice, Loading, PageHeader, Panel } from "@/shared/ui/primitives";
 
@@ -40,7 +42,19 @@ function Method({ enabled, label, icon: Icon }: { enabled: boolean; label: strin
   );
 }
 
-function TotemCard({ totem, onEdit }: { totem: Totem; onEdit: () => void }) {
+function TotemCard({
+  totem,
+  onEdit,
+  onHistory,
+  onToggle,
+  alterando,
+}: {
+  totem: Totem;
+  onEdit: () => void;
+  onHistory: () => void;
+  onToggle: () => void;
+  alterando: boolean;
+}) {
   const license = licenseHealth(totem.license);
   const semPagamento = !hasAnyPaymentMethod(totem.payments);
   // O modo do aplicativo e o ambiente fiscal deveriam concordar. Divergir é
@@ -66,6 +80,23 @@ function TotemCard({ totem, onEdit }: { totem: Totem; onEdit: () => void }) {
           </Badge>
           <Badge tone={MODE_TONE[totem.mode]}>{TOTEM_MODE_LABEL[totem.mode]}</Badge>
           {totem.license && <Badge tone={LICENSE[license].tone}>{LICENSE[license].label}</Badge>}
+          <button
+            onClick={onToggle}
+            disabled={alterando}
+            title={totem.isActive ? "Desligar o totem" : "Ligar o totem"}
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs transition-colors hover:bg-secondary disabled:opacity-50"
+          >
+            <Power size={13} />
+            {totem.isActive ? "Desligar" : "Ligar"}
+          </button>
+          <button
+            onClick={onHistory}
+            title="Ver o histórico de alterações"
+            className="flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs transition-colors hover:bg-secondary"
+          >
+            <History size={13} />
+            Histórico
+          </button>
           <button
             onClick={onEdit}
             title="Editar totem"
@@ -152,7 +183,21 @@ function TotemCard({ totem, onEdit }: { totem: Totem; onEdit: () => void }) {
 
 export function TotemsPage() {
   const { totems } = useContainer();
+  const { session } = useSession();
+  const queryClient = useQueryClient();
   const [editando, setEditando] = useState<Totem | null>(null);
+  const [cadastrando, setCadastrando] = useState(false);
+  const [historico, setHistorico] = useState<Totem | null>(null);
+  const [semTrilha, setSemTrilha] = useState<string | null>(null);
+
+  const ligar = useMutation({
+    mutationFn: (totem: Totem) =>
+      totems.setActive(totem.id, !totem.isActive, session?.user.email ?? "painel"),
+    onSuccess: async (resultado) => {
+      await queryClient.invalidateQueries({ queryKey: ["totems"] });
+      setSemTrilha(resultado.audited ? null : resultado.auditError);
+    },
+  });
   const { data, isPending, error } = useQuery<Totem[]>({
     queryKey: ["totems"],
     queryFn: () => totems.list(),
@@ -163,7 +208,16 @@ export function TotemsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="Totens" count={lista.length} unit={["totem", "totens"]} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <PageHeader title="Totens" count={lista.length} unit={["totem", "totens"]} />
+        <button
+          onClick={() => setCadastrando(true)}
+          className="flex items-center gap-1.5 rounded-lg bg-gradient-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90"
+        >
+          <Plus size={15} />
+          Novo totem
+        </button>
+      </div>
 
       {error && <ErrorNotice error={error} fallback="Não foi possível carregar os totens." />}
 
@@ -180,13 +234,49 @@ export function TotemsPage() {
           </p>
           <div className="grid gap-4 lg:grid-cols-2">
             {lista.map((totem) => (
-              <TotemCard key={totem.id} totem={totem} onEdit={() => setEditando(totem)} />
+              <TotemCard
+                key={totem.id}
+                totem={totem}
+                onEdit={() => setEditando(totem)}
+                onHistory={() => setHistorico(totem)}
+                onToggle={() => ligar.mutate(totem)}
+                alterando={ligar.isPending}
+              />
             ))}
           </div>
         </>
       )}
 
-      {editando && <TotemDialog totem={editando} onClose={() => setEditando(null)} />}
+      {ligar.error && (
+        <ErrorNotice error={ligar.error} fallback="Não foi possível alterar o totem." />
+      )}
+
+      {/* A alteração entrou; o que faltou foi o registro dela. Dizer "não
+          salvou" seria mentira, e ficar calado esconderia o buraco na trilha. */}
+      {semTrilha && (
+        <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
+          <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+          <span>
+            A alteração foi salva, mas não entrou na trilha de auditoria: {semTrilha}. Registrar
+            alterações de totem exige permissão de administrador no banco.
+          </span>
+        </p>
+      )}
+
+      {(editando || cadastrando) && (
+        <TotemDialog
+          totem={editando}
+          onAuditMissing={setSemTrilha}
+          onClose={() => {
+            setEditando(null);
+            setCadastrando(false);
+          }}
+        />
+      )}
+
+      {historico && (
+        <TotemHistoryDialog totem={historico} onClose={() => setHistorico(null)} />
+      )}
     </div>
   );
 }
