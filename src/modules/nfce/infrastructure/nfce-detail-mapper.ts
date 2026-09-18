@@ -1,12 +1,16 @@
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 import { cardBrandName, paymentMethodName } from "./nfce-payment-codes";
 import type {
+  NfceDocuments,
   NfceFiscalTotals,
   NfceHistoryEntry,
+  NfceIdentification,
   NfceIssuer,
   NfceItem,
   NfcePayment,
   NfceRecipient,
+  NfceRecovery,
+  TaxReformTotals,
 } from "../domain/nfce-detail";
 
 /**
@@ -134,4 +138,66 @@ export function toEventEntry(row: Row): NfceHistoryEntry {
 /** Histórico em ordem cronológica decrescente: o que aconteceu por último vem primeiro. */
 export function sortHistory(entries: NfceHistoryEntry[]): NfceHistoryEntry[] {
   return [...entries].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0));
+}
+
+/** Um número que pode não existir — diferente de zero, que é uma resposta. */
+function numeroOuNulo(value: unknown): number | null {
+  return value == null ? null : asNumber(value);
+}
+
+export function toIdentification(row: Row | null | undefined): NfceIdentification | null {
+  if (!row) return null;
+  return {
+    model: asText(row.document_model),
+    operationNature: asText(row.operation_nature),
+    environment: numeroOuNulo(row.environment_type),
+    emissionType: numeroOuNulo(row.emission_type),
+    emissionPurpose: numeroOuNulo(row.emission_purpose),
+    finalConsumer: numeroOuNulo(row.final_consumer_indicator),
+    presence: numeroOuNulo(row.presence_indicator),
+    intermediary: numeroOuNulo(row.intermediary_indicator),
+    danfePrintType: numeroOuNulo(row.danfe_print_type),
+    emissionProcess: numeroOuNulo(row.emission_process),
+    processVersion: asText(row.process_version),
+  };
+}
+
+export function toTaxReform(row: Row): TaxReformTotals {
+  return {
+    base: asNumber(row.ibscbs_tot_v_bc),
+    ibs: asNumber(row.ibscbs_tot_v_ibs),
+    ibsState: asNumber(row.ibscbs_tot_v_ibs_uf),
+    ibsCity: asNumber(row.ibscbs_tot_v_ibs_mun),
+    cbs: asNumber(row.ibscbs_tot_v_cbs),
+    noteTotal: asNumber(row.tot_v_nf_tot),
+  };
+}
+
+export function toRecovery(row: Row): NfceRecovery {
+  return {
+    reconcileStatus: asText(row.reconcile_status),
+    retryCount: asNumber(row.retry_count),
+    lastRetryAt: row.last_retry_at == null ? null : asIsoDate(row.last_retry_at),
+    nextRetryAt: row.next_retry_at == null ? null : asIsoDate(row.next_retry_at),
+    lastErrorCode: asText(row.last_error_code),
+    lastErrorMessage: asText(row.last_error_message),
+    manualFixRequiredAt:
+      row.manual_fix_required_at == null ? null : asIsoDate(row.manual_fix_required_at),
+    manualFixNote: asText(row.manual_fix_note),
+    cancellationProtocol: asText(row.cancellation_protocol),
+    cancelledAt: row.cancelled_at == null ? null : asIsoDate(row.cancelled_at),
+    originNoteId: asText(row.origin_note_id),
+    replacementNoteId: asText(row.replacement_note_id),
+  };
+}
+
+export function toDocuments(row: Row): NfceDocuments {
+  return {
+    authorized: asText(row.authorized_xml),
+    cancellation: asText(row.cancellation_xml),
+    signed: asText(row.signed_xml),
+    generated: asText(row.generated_xml),
+    qrcode: asText(row.qrcode),
+    queryUrl: asText(row.query_url),
+  };
 }

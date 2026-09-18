@@ -18,12 +18,16 @@ import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 import type { NfceDetail } from "../domain/nfce-detail";
 import {
   sortHistory,
+  toDocuments,
   toEventEntry,
+  toIdentification,
   toIssuer,
   toItem,
   toLogEntry,
   toPayment,
   toRecipient,
+  toRecovery,
+  toTaxReform,
   toTotals,
 } from "./nfce-detail-mapper";
 
@@ -169,30 +173,40 @@ export class SupabaseNfceRepository implements NfceRepository {
     const porNota = (view: string) =>
       this.client.from(view).select("*").eq("note_id", noteId);
 
-    const [issuer, recipient, items, payments, logs, events] = await Promise.all([
-      porNota("vw_nfce_issuer").maybeSingle(),
-      porNota("vw_nfce_recipient").maybeSingle(),
-      porNota("vw_nfce_items"),
-      porNota("vw_nfce_payments"),
-      porNota("vw_nfce_logs"),
-      porNota("vw_nfce_events"),
-    ]);
+    const [issuer, recipient, items, payments, logs, events, identification, extras] =
+      await Promise.all([
+        porNota("vw_nfce_issuer").maybeSingle(),
+        porNota("vw_nfce_recipient").maybeSingle(),
+        porNota("vw_nfce_items"),
+        porNota("vw_nfce_payments"),
+        porNota("vw_nfce_logs"),
+        porNota("vw_nfce_events"),
+        porNota("vw_nfce_identification").maybeSingle(),
+        porNota("vw_nfce_additional_info").maybeSingle(),
+      ]);
 
     const linhas = (res: { data: unknown }) => (res.data ?? []) as Record<string, unknown>[];
     const nota = noteRow as Record<string, unknown>;
 
+    const complemento = (extras.data ?? {}) as Record<string, unknown>;
+
     return {
       note: toNote(nota),
+      identification: toIdentification(identification.data as Record<string, unknown> | null),
       issuer: toIssuer((issuer.data ?? {}) as Record<string, unknown>),
       recipient: toRecipient(recipient.data as Record<string, unknown> | null),
       totals: toTotals(nota),
+      taxReform: toTaxReform(nota),
       items: linhas(items).map(toItem).sort((a, b) => a.sequence - b.sequence),
       payments: linhas(payments).map(toPayment).sort((a, b) => a.sequence - b.sequence),
       history: sortHistory([
         ...linhas(logs).map(toLogEntry),
         ...linhas(events).map(toEventEntry),
       ]),
-      authorizedXml: asText(nota.authorized_xml),
+      recovery: toRecovery(nota),
+      documents: toDocuments(nota),
+      additionalInfo: asText(complemento.additional_info),
+      taxInfo: asText(complemento.tax_info),
     };
   }
 }

@@ -3,11 +3,25 @@ import { Link, useParams } from "react-router-dom";
 import { ArrowLeft, TriangleAlert, Wrench } from "lucide-react";
 import { canCorrect } from "../domain/nfce-correction";
 import {
+  hasTaxReform,
+  isContingency,
   itemsMismatch,
   sumItems,
   sumPayments,
   type NfceDetail,
 } from "../domain/nfce-detail";
+import {
+  danfePrintLabel,
+  emissionProcessLabel,
+  emissionPurposeLabel,
+  emissionTypeLabel,
+  environmentLabel,
+  finalConsumerLabel,
+  intermediaryLabel,
+  presenceLabel,
+  reconcileLabel,
+} from "../domain/nfce-codes";
+import { NfceDocumentsSection } from "./NfceDocuments";
 import { NFCE_STATUS_LABEL, NFCE_STATUS_TONE } from "../domain/nfce-note";
 import { useContainer } from "@/shared/container/container-context";
 import { formatCurrency, formatDateTime, formatQuantity } from "@/shared/ui/format";
@@ -69,7 +83,8 @@ export function NfceDetailPage() {
     );
   }
 
-  const { note, issuer, recipient, totals, items, payments, history } = data;
+  const { note, identification, issuer, recipient, totals, items, payments, history, recovery } =
+    data;
   const diferenca = itemsMismatch(data);
   const recebido = sumPayments(payments);
 
@@ -145,7 +160,35 @@ export function NfceDetailPage() {
               }
             />
             <Field label="Tentativas" value={String(note.retryCount)} />
-            <Field label="Tipo de emissão" value={note.emissionType == null ? null : String(note.emissionType)} />
+            <Field
+              label="Tipo de emissão"
+              value={emissionTypeLabel(identification?.emissionType ?? note.emissionType)}
+            />
+          </div>
+        </Section>
+
+        <Section title="Identificação">
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Modelo" value={identification?.model ?? null} />
+            <Field label="Número / série" value={`${note.number} / ${note.serie}`} />
+            <Field label="Ambiente" value={environmentLabel(identification?.environment)} />
+            <Field label="Finalidade" value={emissionPurposeLabel(identification?.emissionPurpose)} />
+            <Field label="Natureza da operação" value={identification?.operationNature ?? null} />
+            <Field label="Consumidor final" value={finalConsumerLabel(identification?.finalConsumer)} />
+            <Field label="Presença" value={presenceLabel(identification?.presence)} />
+            <Field label="Intermediador" value={intermediaryLabel(identification?.intermediary)} />
+            <Field label="Impressão" value={danfePrintLabel(identification?.danfePrintType)} />
+            <Field
+              label="Processo de emissão"
+              value={
+                [
+                  emissionProcessLabel(identification?.emissionProcess),
+                  identification?.processVersion,
+                ]
+                  .filter(Boolean)
+                  .join(" · ") || null
+              }
+            />
           </div>
         </Section>
 
@@ -171,6 +214,34 @@ export function NfceDetailPage() {
                 <span className="tabular-nums">{formatCurrency(totals.approximateTaxes)}</span>
               </div>
             </div>
+
+            {/* IBS, CBS e o total do novo regime só aparecem quando incidem:
+                numa nota anterior à reforma, uma linha de zeros faria parecer
+                que o imposto foi calculado e deu nada. */}
+            {hasTaxReform(data.taxReform) && (
+              <div className="mt-3 space-y-1 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+                <p className="mb-1 font-medium text-foreground">Reforma tributária</p>
+                <div className="flex justify-between">
+                  <span>Base de cálculo</span>
+                  <span className="tabular-nums">{formatCurrency(data.taxReform.base)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>IBS (estadual / municipal)</span>
+                  <span className="tabular-nums">
+                    {formatCurrency(data.taxReform.ibsState)} /{" "}
+                    {formatCurrency(data.taxReform.ibsCity)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span>CBS</span>
+                  <span className="tabular-nums">{formatCurrency(data.taxReform.cbs)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Total no novo regime</span>
+                  <span className="tabular-nums">{formatCurrency(data.taxReform.noteTotal)}</span>
+                </div>
+              </div>
+            )}
           </div>
         </Section>
 
@@ -282,6 +353,99 @@ export function NfceDetailPage() {
           </>
         )}
       </Section>
+
+      {/* Só aparece quando há o que contar: numa nota autorizada de primeira,
+          um bloco vazio de "contingência e reconciliação" é ruído. */}
+      {(recovery.reconcileStatus ||
+        recovery.lastErrorMessage ||
+        recovery.nextRetryAt ||
+        recovery.cancelledAt ||
+        recovery.manualFixRequiredAt ||
+        isContingency(identification)) && (
+        <Section title="Contingência e reconciliação">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Field label="Conferência" value={reconcileLabel(recovery.reconcileStatus)} />
+            <Field
+              label="Última tentativa"
+              value={recovery.lastRetryAt ? formatDateTime(recovery.lastRetryAt) : null}
+            />
+            <Field
+              label="Próxima tentativa"
+              value={recovery.nextRetryAt ? formatDateTime(recovery.nextRetryAt) : null}
+            />
+            <Field
+              label="Cancelamento"
+              value={
+                recovery.cancelledAt
+                  ? `${formatDateTime(recovery.cancelledAt)}${
+                      recovery.cancellationProtocol
+                        ? ` · protocolo ${recovery.cancellationProtocol}`
+                        : ""
+                    }`
+                  : null
+              }
+            />
+          </div>
+
+          {recovery.lastErrorMessage && (
+            <p className="mt-4 flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+              <TriangleAlert size={16} className="mt-0.5 shrink-0" />
+              <span>
+                {recovery.lastErrorCode && (
+                  <span className="font-mono text-xs">{recovery.lastErrorCode} · </span>
+                )}
+                {recovery.lastErrorMessage}
+              </span>
+            </p>
+          )}
+
+          {recovery.manualFixRequiredAt && (
+            <p className="mt-3 text-sm text-warning">
+              Correção manual pedida em {formatDateTime(recovery.manualFixRequiredAt)}
+              {recovery.manualFixNote ? ` — ${recovery.manualFixNote}` : ""}.
+            </p>
+          )}
+
+          {(recovery.originNoteId || recovery.replacementNoteId) && (
+            <p className="mt-3 flex flex-wrap gap-4 text-sm">
+              {recovery.originNoteId && (
+                <Link to={`/nfce/${recovery.originNoteId}`} className="text-primary hover:underline">
+                  Ver a nota de origem
+                </Link>
+              )}
+              {recovery.replacementNoteId && (
+                <Link
+                  to={`/nfce/${recovery.replacementNoteId}`}
+                  className="text-primary hover:underline"
+                >
+                  Ver a nota substituta
+                </Link>
+              )}
+            </p>
+          )}
+        </Section>
+      )}
+
+      <Section title="XML da nota">
+        <NfceDocumentsSection note={note} documents={data.documents} />
+      </Section>
+
+      {(data.additionalInfo || data.taxInfo) && (
+        <Section title="Informações adicionais">
+          {data.additionalInfo && (
+            <div>
+              <p className="text-xs text-muted-foreground">Informação complementar</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm">{data.additionalInfo}</p>
+            </div>
+          )}
+          {data.taxInfo && (
+            <div className={data.additionalInfo ? "mt-4" : ""}>
+              <p className="text-xs text-muted-foreground">Informação ao fisco</p>
+              <p className="mt-1 whitespace-pre-wrap text-sm">{data.taxInfo}</p>
+            </div>
+          )}
+        </Section>
+      )}
 
       <Section title={`Histórico (${history.length})`}>
         {history.length === 0 ? (

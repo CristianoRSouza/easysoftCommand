@@ -9,14 +9,107 @@ import type { NfceNote } from "./nfce-note";
  */
 export interface NfceDetail {
   note: NfceNote;
+  identification: NfceIdentification | null;
   issuer: NfceIssuer;
   recipient: NfceRecipient | null;
   totals: NfceFiscalTotals;
+  taxReform: TaxReformTotals;
   items: NfceItem[];
   payments: NfcePayment[];
   history: NfceHistoryEntry[];
-  /** XML autorizado, quando existe. É o documento que vale legalmente. */
-  authorizedXml: string | null;
+  recovery: NfceRecovery;
+  documents: NfceDocuments;
+  /** Informação complementar impressa na nota (`infCpl`). */
+  additionalInfo: string | null;
+  /** Dados de tributos no campo próprio (`infAdFisco`). */
+  taxInfo: string | null;
+}
+
+/**
+ * Como a nota foi emitida.
+ *
+ * São os campos que explicam por que uma nota saiu diferente da outra: o
+ * ambiente diz se ela vale fiscalmente, o tipo de emissão diz se saiu em
+ * contingência, e a finalidade distingue uma nota normal de uma substituta.
+ */
+export interface NfceIdentification {
+  model: string | null;
+  operationNature: string | null;
+  /** 1 = produção, 2 = homologação. Em homologação a nota não vale. */
+  environment: number | null;
+  emissionType: number | null;
+  emissionPurpose: number | null;
+  finalConsumer: number | null;
+  presence: number | null;
+  intermediary: number | null;
+  danfePrintType: number | null;
+  emissionProcess: number | null;
+  processVersion: string | null;
+}
+
+/** 1 = normal; qualquer outro valor significa emissão em contingência. */
+export function isContingency(identification: NfceIdentification | null): boolean {
+  return identification?.emissionType != null && identification.emissionType !== 1;
+}
+
+/**
+ * Totais de IBS, CBS e Imposto Seletivo — os tributos da reforma.
+ *
+ * Ficam separados dos totais antigos de propósito: são regimes diferentes
+ * convivendo na mesma nota, e somá-los num número só esconderia qual imposto
+ * é qual.
+ */
+export interface TaxReformTotals {
+  base: number;
+  ibs: number;
+  ibsState: number;
+  ibsCity: number;
+  cbs: number;
+  /** Total da nota no novo regime (`vNFTot`). */
+  noteTotal: number;
+}
+
+/** `true` quando a reforma já incide sobre esta nota. */
+export function hasTaxReform(totals: TaxReformTotals): boolean {
+  return totals.base > 0 || totals.ibs > 0 || totals.cbs > 0 || totals.noteTotal > 0;
+}
+
+/**
+ * O que aconteceu depois da recusa.
+ *
+ * É o bloco que responde à pergunta de quem está esperando a nota sair: ela
+ * vai tentar de novo, quando, e o que deu errado da última vez.
+ */
+export interface NfceRecovery {
+  reconcileStatus: string | null;
+  retryCount: number;
+  lastRetryAt: string | null;
+  nextRetryAt: string | null;
+  lastErrorCode: string | null;
+  lastErrorMessage: string | null;
+  manualFixRequiredAt: string | null;
+  manualFixNote: string | null;
+  cancellationProtocol: string | null;
+  cancelledAt: string | null;
+  /** Quando esta nota substitui outra, ou foi substituída. */
+  originNoteId: string | null;
+  replacementNoteId: string | null;
+}
+
+/**
+ * Os XMLs da nota.
+ *
+ * O autorizado é o documento que vale legalmente; o de cancelamento vale junto
+ * com ele quando a nota foi cancelada. Assinado e gerado servem para
+ * investigar uma recusa — mostram o que foi enviado, não o que foi aceito.
+ */
+export interface NfceDocuments {
+  authorized: string | null;
+  cancellation: string | null;
+  signed: string | null;
+  generated: string | null;
+  qrcode: string | null;
+  queryUrl: string | null;
 }
 
 export interface NfceIssuer {
