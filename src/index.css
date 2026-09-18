@@ -48,6 +48,20 @@
     --info: 205 95% 72%;
     --info-foreground: 222 47% 8%;
 
+    /* Séries dos gráficos — crédito, débito e PIX, nesta ordem fixa.
+
+       O projeto anterior usava dois azuis vizinhos para crédito e débito. Medida
+       contra o fundo escuro, a diferença entre eles é ΔE 14 — abaixo do piso de
+       15, ou seja, difícil de distinguir mesmo com visão normal, e pior ainda
+       numa barra empilhada onde os dois se encostam.
+
+       Aqui débito vira verde e PIX âmbar, nos tons que a paleta já tinha. A cor
+       segue o meio de pagamento e nunca a posição: filtrar uma série não
+       repinta as outras. */
+    --chart-credit: 210 75% 58%;
+    --chart-debit: 155 65% 38%;
+    --chart-pix: 38 92% 38%;
+
     --border: 218 28% 18%;
     --input: 218 28% 14%;
     --ring: 210 75% 58%;
