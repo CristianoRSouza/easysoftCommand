@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrderRepository } from "../application/order-repository";
 import { toOrderStatus, type Order, type OrderQuery } from "../domain/order";
+import type {
+  OrderClosing,
+  OrderDetail,
+  OrderItem,
+  OrderPayment,
+} from "../domain/order-detail";
 import {
   pageToRange,
   startOfDayIso,
@@ -18,6 +24,50 @@ const SORT_COLUMN: Record<OrderQuery["sortKey"], string> = {
   tableName: "table_name",
   status: "status",
 };
+
+const DETAIL_COLUMNS = [
+  COLUMNS,
+  "sync_close_requested_at, sync_closed_to_fb_at, fb_sale_id, fb_cash_register_id",
+].join(", ");
+
+function toOrderItem(row: Record<string, unknown>): OrderItem {
+  return {
+    id: asText(row.id) ?? "",
+    productName: asText(row.product_name) ?? "Produto sem nome",
+    barcode: asText(row.product_barcode),
+    unitName: asText(row.unit_name),
+    quantity: asNumber(row.quantity),
+    unitPrice: asNumber(row.unit_price),
+    subtotal: asNumber(row.subtotal),
+    origin: asText(row.origin),
+    status: asText(row.status),
+    syncedToFirebird: row.synced_to_fb === true,
+    firebirdId: asText(row.fb_id),
+  };
+}
+
+function toPayment(row: Record<string, unknown>): OrderPayment {
+  return {
+    id: asText(row.id) ?? "",
+    method: asText(row.payment_method) ?? "",
+    amount: asNumber(row.amount),
+    status: asText(row.status) ?? "",
+    createdAt: asIsoDate(row.created_at),
+  };
+}
+
+function toClosing(row: Record<string, unknown>): OrderClosing {
+  return {
+    pending: row.sync_close_pending === true,
+    attempts: asNumber(row.sync_close_attempts),
+    lastError: asText(row.sync_close_last_error),
+    requestedAt:
+      row.sync_close_requested_at == null ? null : asIsoDate(row.sync_close_requested_at),
+    closedAt: row.sync_closed_to_fb_at == null ? null : asIsoDate(row.sync_closed_to_fb_at),
+    firebirdSaleId: asText(row.fb_sale_id),
+    firebirdCashRegisterId: asText(row.fb_cash_register_id),
+  };
+}
 
 function toOrder(row: Record<string, unknown>): Order {
   return {
@@ -71,6 +121,53 @@ export class SupabaseOrderRepository implements OrderRepository {
     return {
       items: ((data ?? []) as unknown as Record<string, unknown>[]).map(toOrder),
       total: count ?? 0,
+    };
+  }
+  /**
+   * Itens, pagamentos e fechamento de uma comanda.
+   *
+   * A comanda vem com filtro de loja; se não é desta loja, nada mais é lido.
+   * Os pagamentos são encontrados por `order_ids`, que é uma lista — uma
+   * transação pode fechar várias comandas de uma vez.
+   */
+  async detail(orderId: string): Promise<OrderDetail | null> {
+    const { data: orderRow, error } = await this.client
+      .from("vw_command_orders")
+      .select(DETAIL_COLUMNS)
+      .eq("store_id", this.tenant.storeId)
+      .eq("id", orderId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Falha ao carregar a comanda: ${error.message}`);
+    if (!orderRow) return null;
+
+    const [itens, pagamentos] = await Promise.all([
+      this.client
+        .from("vw_command_order_items")
+        .select(
+          "id, product_name, product_barcode, unit_name, quantity, unit_price, subtotal, origin, status, synced_to_fb, fb_id, created_at",
+        )
+        .eq("order_id", orderId)
+        .order("created_at", { ascending: true }),
+      this.client
+        .from("vw_command_transactions")
+        .select("id, payment_method, amount, status, created_at")
+        .eq("store_id", this.tenant.storeId)
+        .contains("order_ids", [orderId])
+        .order("created_at", { ascending: true }),
+    ]);
+
+    if (itens.error) throw new Error(`Falha ao ler os itens: ${itens.error.message}`);
+    if (pagamentos.error)
+      throw new Error(`Falha ao ler os pagamentos: ${pagamentos.error.message}`);
+
+    const row = orderRow as unknown as Record<string, unknown>;
+
+    return {
+      order: toOrder(row),
+      items: ((itens.data ?? []) as unknown as Record<string, unknown>[]).map(toOrderItem),
+      payments: ((pagamentos.data ?? []) as unknown as Record<string, unknown>[]).map(toPayment),
+      closing: toClosing(row),
     };
   }
 }

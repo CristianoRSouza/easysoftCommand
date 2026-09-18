@@ -12,6 +12,7 @@ import {
 } from "../domain/transaction";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
+import { TransactionDialog } from "./TransactionDialog";
 import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
 import { formatCurrency, formatDateTime } from "@/shared/ui/format";
 import {
@@ -29,6 +30,7 @@ import {
 export function TransactionsPage() {
   const { transactions } = useContainer();
   const [query, setQuery] = useState<TransactionQuery>(DEFAULT_TRANSACTION_QUERY);
+  const [aberta, setAberta] = useState<Transaction | null>(null);
 
   // Período além do plano não é consultado: o aviso substitui o resultado.
   const foraDoPlano = useOutsidePlanWindow(query.range);
@@ -146,7 +148,9 @@ export function TransactionsPage() {
                 {data?.items.map((transaction) => (
                   <tr
                     key={transaction.id}
-                    className="border-t border-border/40 transition-colors hover:bg-secondary/40"
+                    onClick={() => setAberta(transaction)}
+                    title="Ver o retorno do TEF e os dados de PIX"
+                    className="cursor-pointer border-t border-border/40 transition-colors hover:bg-secondary/40"
                   >
                     <td className="px-4 py-3 tabular-nums text-muted-foreground">
                       {formatDateTime(transaction.createdAt)}
@@ -181,6 +185,8 @@ export function TransactionsPage() {
           </p>
         </>
       )}
+
+      {aberta && <TransactionDialog transaction={aberta} onClose={() => setAberta(null)} />}
 
       {!foraDoPlano && (
         <Pagination

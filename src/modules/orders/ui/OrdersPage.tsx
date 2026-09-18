@@ -11,6 +11,7 @@ import {
 } from "../domain/order";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
+import { OrderDialog } from "./OrderDialog";
 import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
 import { formatDateTime } from "@/shared/ui/format";
 import {
@@ -34,6 +35,7 @@ const STATUS_TONE = {
 export function OrdersPage() {
   const { orders } = useContainer();
   const [query, setQuery] = useState<OrderQuery>(DEFAULT_ORDER_QUERY);
+  const [aberta, setAberta] = useState<Order | null>(null);
 
   // Período além do plano não é consultado: o aviso substitui o resultado.
   const foraDoPlano = useOutsidePlanWindow(query.range);
@@ -143,7 +145,9 @@ export function OrdersPage() {
               {data?.items.map((order) => (
                 <tr
                   key={order.id}
-                  className="border-t border-border/40 transition-colors hover:bg-secondary/40"
+                  onClick={() => setAberta(order)}
+                  title="Ver itens, pagamentos e o fechamento no PDV"
+                  className="cursor-pointer border-t border-border/40 transition-colors hover:bg-secondary/40"
                 >
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
                     {order.barcode || "—"}
@@ -175,6 +179,8 @@ export function OrdersPage() {
           </table>
         </Panel>
       )}
+
+      {aberta && <OrderDialog order={aberta} onClose={() => setAberta(null)} />}
 
       {!foraDoPlano && (
         <Pagination
