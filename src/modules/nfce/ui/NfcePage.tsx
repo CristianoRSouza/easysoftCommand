@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Download, Search } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   DEFAULT_NFCE_QUERY,
@@ -13,6 +13,7 @@ import {
   type NfceStatusFilter,
   type NfceTotals,
 } from "../domain/nfce-note";
+import { exportNfceXml } from "../application/export-nfce-xml";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
 import { PlanWindowNotice, useOutsidePlanWindow } from "@/shared/plan/PlanWindowNotice";
@@ -70,6 +71,7 @@ export function NfcePage() {
   // O Dashboard aponta para cá já filtrado; sem isto, o número clicado abriria
   // a lista inteira e a pessoa teria de refazer o filtro à mão.
   const [parametros] = useSearchParams();
+  const [exportadas, setExportadas] = useState(0);
   const [query, setQuery] = useState<NfceQuery>(() => {
     const status = parametros.get("status");
     return status ? { ...DEFAULT_NFCE_QUERY, status: status as NfceStatusFilter } : DEFAULT_NFCE_QUERY;
@@ -97,6 +99,19 @@ export function NfcePage() {
   const patch = (next: Partial<NfceQuery>) =>
     setQuery((current) => ({ ...current, ...next }));
 
+  const exportacao = useMutation({
+    mutationFn: () => exportNfceXml(nfce)(query, setExportadas),
+    onSuccess: ({ blob, fileName }) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    },
+    onSettled: () => setExportadas(0),
+  });
+
   const total = lista.data?.total ?? 0;
   const t = totais.data;
   const emAtencao = t
@@ -106,6 +121,31 @@ export function NfcePage() {
   return (
     <div className="space-y-5">
       <PageHeader title="NFC-e" count={total} unit={["nota", "notas"]} />
+
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <button
+          onClick={() => exportacao.mutate()}
+          disabled={exportacao.isPending || foraDoPlano || total === 0}
+          title="Baixa os XML de todas as notas do filtro, não só as desta página"
+          className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-secondary disabled:opacity-50"
+        >
+          <Download size={14} />
+          {exportacao.isPending
+            ? `Montando o pacote... (${exportadas} notas)`
+            : "Baixar XML (.zip)"}
+        </button>
+      </div>
+
+      {exportacao.error && (
+        <ErrorNotice error={exportacao.error} fallback="Não foi possível montar o pacote." />
+      )}
+
+      {exportacao.data && exportacao.data.stats.withoutXml.length > 0 && (
+        <p className="text-sm text-warning">
+          {exportacao.data.stats.withoutXml.length} nota(s) do filtro não têm XML e ficaram de fora.
+          O arquivo _RESUMO.txt dentro do pacote lista quais.
+        </p>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <SummaryCard

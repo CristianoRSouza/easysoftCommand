@@ -1,6 +1,7 @@
 import type { Page } from "@/shared/domain/paging";
 import type { NfceNote, NfceQuery, NfceTotals } from "../domain/nfce-note";
 import type { NfceDetail } from "../domain/nfce-detail";
+import type { ArchivedNote } from "../domain/nfce-archive";
 
 /**
  * Porta de acesso às notas fiscais.
@@ -18,4 +19,13 @@ export interface NfceRepository {
   totals(query: NfceQuery): Promise<NfceTotals>;
   /** `null` quando a nota não existe ou não pertence à loja em uso. */
   detail(noteId: string): Promise<NfceDetail | null>;
+
+  /**
+   * Um lote de notas com os XML, para montar o pacote de exportação.
+   *
+   * Vai em lotes com cursor por `id` porque o pacote cobre o filtro inteiro, e
+   * não a página na tela: exportar o que está visível entregaria ao contador um
+   * pedaço do mês com cara de mês inteiro.
+   */
+  xmlBatch(query: NfceQuery, afterId: string | null, limit: number): Promise<ArchivedNote[]>;
 }

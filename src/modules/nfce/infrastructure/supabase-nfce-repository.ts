@@ -16,6 +16,7 @@ import {
 import type { Tenant } from "@/shared/tenant/tenant";
 import { asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 import type { NfceDetail } from "../domain/nfce-detail";
+import type { ArchivedNote } from "../domain/nfce-archive";
 import {
   sortHistory,
   toDocuments,
@@ -208,5 +209,28 @@ export class SupabaseNfceRepository implements NfceRepository {
       additionalInfo: asText(complemento.additional_info),
       taxInfo: asText(complemento.tax_info),
     };
+  }
+
+  async xmlBatch(query: NfceQuery, afterId: string | null, limit: number): Promise<ArchivedNote[]> {
+    let request = this.applyFilters(
+      this.client
+        .from("vw_nfce_notes")
+        .select("id, number, serie, access_key, status, authorized_xml, cancellation_xml"),
+      query,
+    );
+    if (afterId) request = request.gt("id", afterId);
+
+    const { data, error } = await request.order("id", { ascending: true }).limit(limit);
+    if (error) throw new Error(`Falha ao buscar os XML: ${error.message}`);
+
+    return ((data ?? []) as unknown as Record<string, unknown>[]).map((row) => ({
+      id: asText(row.id) ?? "",
+      number: asNumber(row.number),
+      serie: asNumber(row.serie),
+      accessKey: asText(row.access_key),
+      status: asText(row.status) ?? "",
+      authorizedXml: asText(row.authorized_xml),
+      cancellationXml: asText(row.cancellation_xml),
+    }));
   }
 }
