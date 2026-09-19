@@ -102,19 +102,3 @@ export function parseSyncError(raw: string | null): ParsedSyncError | null {
     raw,
   };
 }
-
-/** Agrupa as falhas por categoria, da mais frequente para a menos. */
-export function groupByCategory(erros: (string | null)[]): {
-  category: SyncErrorCategory;
-  count: number;
-}[] {
-  const contagem = new Map<SyncErrorCategory, number>();
-  for (const bruto of erros) {
-    const analisado = parseSyncError(bruto);
-    if (!analisado) continue;
-    contagem.set(analisado.category, (contagem.get(analisado.category) ?? 0) + 1);
-  }
-  return [...contagem.entries()]
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count);
-}

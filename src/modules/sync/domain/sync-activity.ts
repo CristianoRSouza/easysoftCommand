@@ -1,73 +1,141 @@
-import type { DateRange } from "@/shared/domain/paging";
-
 /**
- * Fila de sincronização entre o PDV da loja e a nuvem.
+ * As duas filas de sincronização entre a loja e a nuvem.
  *
- * O PDV publica as mudanças; a nuvem as aplica. Enquanto um item não é
- * aplicado, o painel mostra dados mais velhos que a loja — e sem esta tela
- * ninguém saberia por quê.
+ * Na entrada, a loja publica as mudanças e a nuvem as aplica. Na saída, o que
+ * é alterado no painel — configuração de totem, usuários — espera a loja
+ * buscar. Item preso em qualquer uma é dado que existe de um lado e ainda não
+ * existe do outro, e sem esta tela ninguém saberia por quê.
  */
+export type QueueDirection = "inbox" | "outbox";
 
-export interface SyncQuery {
-  status: "all" | "error";
-  range: DateRange;
-  page: number;
-  pageSize: number;
-}
+export const DIRECTION_LABEL: Record<QueueDirection, string> = {
+  inbox: "Da loja para a nuvem",
+  outbox: "Da nuvem para a loja",
+};
 
-export const DEFAULT_SYNC_QUERY: SyncQuery = {
-  status: "all",
-  range: { from: null, to: null },
-  page: 1,
-  pageSize: 50,
+/** O que "concluído" quer dizer em cada direção. */
+export const DONE_LABEL: Record<QueueDirection, string> = {
+  inbox: "Aplicados",
+  outbox: "Despachados",
 };
 
 /**
- * Um item da fila de entrada da nuvem.
- *
- * O PDV publica mudanças; a nuvem aplica. Um item preso em `pending` com muitas
- * tentativas é dado que existe na loja e ainda não existe na nuvem — a origem
- * silenciosa de "o painel não mostra a venda de ontem".
+ * O estado de um evento. A entrada chama o sucesso de `applied` e a saída, de
+ * `dispatched`; para quem lê a tela é a mesma coisa: chegou.
  */
-export interface InboxItem {
-  id: string;
-  entity: string;
-  entityId: string | null;
-  operation: string | null;
-  applyStatus: InboxStatus;
-  retryCount: number;
-  lastError: string | null;
-  receivedAt: string;
-  appliedAt: string | null;
-}
+export type QueueStatus = "done" | "pending" | "failed";
 
-export type InboxStatus = "applied" | "pending" | "failed";
-
-export function toInboxStatus(value: unknown): InboxStatus {
-  if (value === "applied" || value === "done" || value === "ok") return "applied";
-  if (value === "failed" || value === "error") return "failed";
+export function toQueueStatus(value: unknown): QueueStatus {
+  if (value === "applied" || value === "dispatched") return "done";
+  if (value === "failed") return "failed";
   return "pending";
 }
 
-export const INBOX_STATUS_LABEL: Record<InboxStatus, string> = {
-  applied: "Aplicado",
+export const QUEUE_STATUS_LABEL: Record<QueueStatus, string> = {
+  done: "Concluído",
   pending: "Na fila",
   failed: "Falhou",
 };
 
-/** Resumo da fila, para dizer se ela está andando ou entupida. */
-export interface InboxSummary {
-  applied: number;
-  pending: number;
+export interface QueueSummary {
+  newPending: number;
+  retrying: number;
+  done: number;
+  /** Desistiu depois de esgotar as tentativas. Não anda sozinho. */
   failed: number;
-  /** Item mais antigo ainda não aplicado — o atraso real da fila. */
-  oldestPendingAt: string | null;
+  /** Concluídos na última hora — diz se a fila está andando. */
+  doneLastHour: number;
 }
 
-/** Minutos de atraso do item mais antigo na fila. */
-export function backlogMinutes(summary: InboxSummary, now: Date = new Date()): number | null {
-  if (!summary.oldestPendingAt) return null;
-  const at = new Date(summary.oldestPendingAt);
-  if (Number.isNaN(at.getTime())) return null;
-  return Math.max(0, Math.floor((now.getTime() - at.getTime()) / 60_000));
+export interface EntityStatus {
+  entity: string;
+  status: QueueStatus;
+  count: number;
+  retrying: number;
+  maxRetry: number;
+  oldestAt: string | null;
+  newestAt: string | null;
+}
+
+/** Pendentes que nem chegaram a ser tentados, por entidade. */
+export interface BacklogEntry {
+  entity: string;
+  count: number;
+  oldestAt: string | null;
+}
+
+export interface ActiveRetry {
+  eventId: string;
+  entity: string;
+  operation: string;
+  retryCount: number;
+  nextRetryAt: string | null;
+  lastError: string | null;
+}
+
+/** Falhas terminais agrupadas pela mensagem de erro. */
+export interface FailureGroup {
+  entity: string;
+  error: string;
+  count: number;
+  retriesSpent: number;
+  lastAt: string | null;
+}
+
+export interface QueueEvent {
+  eventId: string;
+  entity: string;
+  entityId: string | null;
+  operation: string;
+  status: QueueStatus;
+  retryCount: number;
+  /** Quando entrou na fila. */
+  queuedAt: string;
+  /** Quando foi aplicado ou despachado. */
+  doneAt: string | null;
+  error: string | null;
+  payload: unknown;
+}
+
+/** Tudo o que a tela mostra de uma direção, menos a lista de eventos. */
+export interface QueueOverview {
+  summary: QueueSummary;
+  byEntity: EntityStatus[];
+  backlog: BacklogEntry[];
+  activeRetries: ActiveRetry[];
+  failureGroups: FailureGroup[];
+  recentFailures: QueueEvent[];
+}
+
+/** A operação gravada na fila, em palavras. `U` sozinho não diz nada a quem opera. */
+export function operationLabel(op: string): string {
+  const chave = op.trim().toLowerCase();
+  if (chave === "i" || chave === "insert") return "Inclusão";
+  if (chave === "u" || chave === "update") return "Alteração";
+  if (chave === "d" || chave === "delete") return "Exclusão";
+  if (chave === "upsert") return "Inclusão ou alteração";
+  return op.trim() || "—";
+}
+
+/** Quando o próximo retry acontece, relativo a agora. */
+export function nextRetryLabel(nextRetryAt: string | null, now: Date = new Date()): string {
+  if (!nextRetryAt) return "imediato";
+  const segundos = Math.ceil((new Date(nextRetryAt).getTime() - now.getTime()) / 1000);
+  if (Number.isNaN(segundos)) return "—";
+  if (segundos <= 0) return "pronto agora";
+  if (segundos < 60) return `em ${segundos}s`;
+  return `em ${Math.ceil(segundos / 60)} min`;
+}
+
+/** Há quanto tempo, em texto curto. */
+export function timeAgo(iso: string | null, now: Date = new Date()): string {
+  if (!iso) return "—";
+  const segundos = Math.floor((now.getTime() - new Date(iso).getTime()) / 1000);
+  if (Number.isNaN(segundos)) return "—";
+  if (segundos < 60) return `${Math.max(0, segundos)}s atrás`;
+  const minutos = Math.floor(segundos / 60);
+  if (minutos < 60) return `${minutos} min atrás`;
+  const horas = Math.floor(minutos / 60);
+  if (horas < 24) return `${horas}h atrás`;
+  return `${Math.floor(horas / 24)}d atrás`;
 }
