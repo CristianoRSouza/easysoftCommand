@@ -4,7 +4,6 @@ import { Check, Minus, Pencil, ShieldAlert, ShieldCheck, TriangleAlert } from "l
 import {
   certificateHealth,
   daysUntilExpiry,
-  isProduction,
   type CertificateHealth,
   type NfceIssuer,
 } from "../domain/nfce-issuer";
@@ -135,11 +134,6 @@ export function IssuerPage() {
           <Badge tone={data.isActive ? "success" : "muted"}>
             {data.isActive ? "Ativo" : "Inativo"}
           </Badge>
-          {fiscal.environment != null && (
-            <Badge tone={isProduction(fiscal) ? "success" : "warning"}>
-              {isProduction(fiscal) ? "Produção" : "Homologação"}
-            </Badge>
-          )}
           <button
             onClick={() => setEditando(true)}
             className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm transition-colors hover:bg-secondary"
@@ -151,17 +145,6 @@ export function IssuerPage() {
       </div>
 
       {editando && <IssuerDialog issuer={data} onClose={() => setEditando(false)} />}
-
-      {/* O ambiente de homologação emite notas sem valor fiscal. Quem abre esta
-          tela precisa ver isso antes de qualquer outro dado. */}
-      {fiscal.environment != null && !isProduction(fiscal) && (
-        <p className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning">
-          <TriangleAlert size={16} className="mt-0.5 shrink-0" />
-          <span>
-            Emitente em homologação. As notas emitidas neste ambiente não têm valor fiscal.
-          </span>
-        </p>
-      )}
 
       <CertificateAlert issuer={data} />
 
@@ -196,21 +179,15 @@ export function IssuerPage() {
 
         <Section title="Configuração fiscal">
           <div className="grid grid-cols-2 gap-4">
-            <Field
-              label="Ambiente"
-              value={
-                fiscal.environment == null
-                  ? null
-                  : isProduction(fiscal)
-                    ? "1 — Produção"
-                    : `${fiscal.environment} — Homologação`
-              }
-            />
             <Field label="Série NFC-e" value={fiscal.nfceSerie?.toString() ?? null} />
             <Field label="Série NF-e" value={fiscal.nfeSerie?.toString() ?? null} />
             <Field label="Regime tributário" value={fiscal.taxRegimeCode?.toString() ?? null} />
             <Field label="Regime PIS/COFINS" value={fiscal.pisCofinsRegimeCode?.toString() ?? null} />
           </div>
+          <p className="mt-4 text-xs text-muted-foreground">
+            O ambiente de emissão (produção ou homologação) e a série usada na venda ficam na
+            configuração de cada totem.
+          </p>
         </Section>
 
         <Section title="Certificado digital">

@@ -97,8 +97,6 @@ export class SupabaseIssuerRepository implements IssuerRepository {
         phone: asText(store.phone1),
       },
       fiscal: {
-        // O ambiente é decidido pelo serviço emissor, não fica na loja.
-        environment: null,
         nfceSerie: store.nfce_series == null ? null : asNumber(store.nfce_series),
         nfeSerie: store.nfe_series == null ? null : asNumber(store.nfe_series),
         taxRegimeCode: relationCode(store.tax_regime),

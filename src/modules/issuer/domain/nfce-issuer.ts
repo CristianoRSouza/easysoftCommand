@@ -35,9 +35,14 @@ export interface IssuerAddress {
   phone: string | null;
 }
 
+/**
+ * O que a loja guarda de configuração fiscal.
+ *
+ * O ambiente (produção ou homologação) não está aqui: ele é configurado em
+ * cada totem. O projeto anterior mostrava "homologação" fixo nesta tela, para
+ * qualquer loja — inclusive as que emitem em produção.
+ */
 export interface IssuerFiscalSettings {
-  /** 1 = produção, 2 = homologação. Emitir em homologação não vale fiscalmente. */
-  environment: number | null;
   nfceSerie: number | null;
   nfeSerie: number | null;
   taxRegimeCode: number | null;
@@ -109,7 +114,3 @@ export function daysUntilExpiry(
   return Math.ceil((expiry.getTime() - now.getTime()) / 86_400_000);
 }
 
-/** 1 = produção; qualquer outro valor emite sem valor fiscal. */
-export function isProduction(fiscal: IssuerFiscalSettings): boolean {
-  return fiscal.environment === 1;
-}

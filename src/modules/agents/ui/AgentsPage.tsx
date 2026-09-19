@@ -117,9 +117,13 @@ function AgentCard({
         <Field
           label="Worker de contingência"
           value={
-            agent.contingency.workerEnabled
-              ? `a cada ${ms(agent.contingency.workerIntervalMs)}`
-              : "desligado"
+            !agent.contingency.workerEnabled
+              ? "desligado"
+              : agent.contingency.workerIntervalMs
+                ? `a cada ${ms(agent.contingency.workerIntervalMs)}`
+                : // Zero é o valor de fábrica do cadastro; "a cada 0 ms" leria
+                  // como laço sem pausa, o que nada indica que seja.
+                  "ligado, sem intervalo definido"
           }
         />
       </div>
