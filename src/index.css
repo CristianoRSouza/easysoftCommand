@@ -5,9 +5,12 @@
 @tailwind utilities;
 
 /* =========================================================================
-   Design System "Navy Trust" — dark-only.
-   Portado do projeto anterior sem alteração de valores: mesmas cores, mesmas
-   fontes, mesmos gradientes. Trocar a aparência não é objetivo da migração.
+   Design System "Navy Trust".
+   O escuro é o padrão e foi portado do projeto anterior sem alteração de
+   valores. O claro (classe `light` no <html>) é a mesma identidade — mesmo
+   azul, mesmas fontes — em fundo claro. O projeto anterior tinha o botão de
+   tema, mas desde junho de 2026 as duas paletas eram iguais e ele não mudava
+   nada.
    ========================================================================= */
 
 @layer base {
@@ -90,6 +93,75 @@
     --font-heading: "Sora", "Manrope", system-ui, sans-serif;
     --font-body: "Manrope", system-ui, sans-serif;
     --font-mono: ui-monospace, "JetBrains Mono", monospace;
+  }
+
+  /* Tons escurecidos em relação ao escuro: todo texto colorido fica acima de
+     4,5:1 de contraste sobre o fundo branco (WCAG AA). */
+  :root.light {
+    color-scheme: light;
+
+    --background: 214 32% 97%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 210 75% 42%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 205 90% 55%;
+
+    --secondary: 214 30% 92%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 214 30% 94%;
+    --muted-foreground: 215 16% 40%;
+
+    --accent: 210 75% 42%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 155 70% 28%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 30 95% 35%;
+    --warning-foreground: 0 0% 100%;
+
+    --info: 205 85% 36%;
+    --info-foreground: 0 0% 100%;
+
+    --chart-credit: 210 75% 45%;
+    --chart-debit: 155 65% 32%;
+    --chart-pix: 38 92% 45%;
+
+    --border: 214 25% 86%;
+    --input: 0 0% 100%;
+    --ring: 210 75% 42%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 30% 25%;
+    --sidebar-primary: 210 75% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 40% 94%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 25% 88%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(210 75% 42%), hsl(205 90% 55%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(214 32% 97%));
+    --gradient-hero:
+      radial-gradient(80% 60% at 20% 0%, hsl(210 75% 58% / 0.1), transparent 60%),
+      radial-gradient(60% 50% at 100% 100%, hsl(205 95% 72% / 0.08), transparent 60%);
+
+    --shadow-elegant:
+      0 12px 32px -20px hsl(222 47% 11% / 0.25),
+      0 4px 12px -8px hsl(210 60% 40% / 0.15);
+    --shadow-glow:
+      0 0 0 1px hsl(210 75% 42% / 0.15),
+      0 8px 30px -8px hsl(210 75% 42% / 0.25);
   }
 
   * {

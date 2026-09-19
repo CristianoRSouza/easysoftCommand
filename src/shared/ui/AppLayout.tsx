@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { PanelLeft, Sparkles } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { UserMenu } from "./UserMenu";
+import { ThemeToggle } from "./ThemeToggle";
 import { useTenant } from "@/shared/tenant/tenant-context";
 import { StorePicker } from "@/shared/tenant/StorePicker";
 import { LicenseBanner } from "@/shared/plan/LicenseBanner";
@@ -62,7 +63,12 @@ export function AppLayout() {
           </button>
           <span className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
             Desenvolvido por
-            <img src={logoEasySoft} alt="EasySoft" className="h-5 object-contain opacity-80" />
+            {/* O logo tem letras brancas: no tema claro, vai sobre uma faixa escura. */}
+            <img
+              src={logoEasySoft}
+              alt="EasySoft"
+              className="h-5 rounded object-contain opacity-80 [.light_&]:bg-[hsl(222_47%_11%)] [.light_&]:px-1.5 [.light_&]:opacity-100"
+            />
           </span>
 
           <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
@@ -96,6 +102,7 @@ export function AppLayout() {
             )}
 
             <UserMenu />
+            <ThemeToggle />
           </div>
         </header>
 
