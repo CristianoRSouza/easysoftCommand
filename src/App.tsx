@@ -18,7 +18,7 @@ import { PixPage } from "@/modules/pixnopdv/ui/PixPage";
 import { TaxReformPage } from "@/modules/taxreform/ui/TaxReformPage";
 import { CloudQueuePage } from "@/modules/sync/ui/CloudQueuePage";
 import { ManualPage } from "@/pages/ManualPage";
-import { WizardPage } from "@/pages/WizardPage";
+import { WizardPage } from "@/modules/setup/ui/WizardPage";
 import { BootstrapCodePage } from "@/pages/BootstrapCodePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
