@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   DEFAULT_NFCE_QUERY,
   NFCE_STATUS_LABEL,
@@ -67,7 +67,13 @@ function SummaryCard({
 export function NfcePage() {
   const { nfce } = useContainer();
   const navigate = useNavigate();
-  const [query, setQuery] = useState<NfceQuery>(DEFAULT_NFCE_QUERY);
+  // O Dashboard aponta para cá já filtrado; sem isto, o número clicado abriria
+  // a lista inteira e a pessoa teria de refazer o filtro à mão.
+  const [parametros] = useSearchParams();
+  const [query, setQuery] = useState<NfceQuery>(() => {
+    const status = parametros.get("status");
+    return status ? { ...DEFAULT_NFCE_QUERY, status: status as NfceStatusFilter } : DEFAULT_NFCE_QUERY;
+  });
 
   // Período além do plano não é consultado: o aviso substitui o resultado.
   const foraDoPlano = useOutsidePlanWindow(query.range);

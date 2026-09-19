@@ -119,6 +119,17 @@ export function AuditPage() {
           />
         </div>
         <select
+          value={query.action}
+          onChange={(e) => patch({ action: e.target.value as AuditQuery["action"], page: 1 })}
+          className={FIELD}
+        >
+          <option value="all">Todas as ações</option>
+          <option value="created">Criação</option>
+          <option value="updated">Alteração</option>
+          <option value="toggled">Liga/desliga</option>
+          <option value="deleted">Exclusão</option>
+        </select>
+        <select
           value={query.source}
           onChange={(e) => patch({ source: e.target.value as AuditQuery["source"], page: 1 })}
           className={FIELD}

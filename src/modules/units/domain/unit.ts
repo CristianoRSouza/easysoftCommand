@@ -16,6 +16,8 @@ export interface Unit {
   description: string;
   isFractional: boolean;
   isActive: boolean;
+  /** Quando a unidade entrou no cadastro — veio do PDV pela sincronização. */
+  createdAt: string | null;
 }
 
 export interface UnitQuery {

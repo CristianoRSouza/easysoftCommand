@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { UnitRepository } from "../application/unit-repository";
 import type { Unit, UnitQuery } from "../domain/unit";
 import type { Tenant } from "@/shared/tenant/tenant";
-import { asBoolean, asNumber, asText } from "@/shared/infrastructure/convert";
+import { asBoolean, asIsoDate, asNumber, asText } from "@/shared/infrastructure/convert";
 
 function toUnit(row: Record<string, unknown>): Unit {
   return {
@@ -12,6 +12,7 @@ function toUnit(row: Record<string, unknown>): Unit {
     description: asText(row.description) ?? "",
     isFractional: asBoolean(row.is_fractional),
     isActive: asBoolean(row.is_active),
+    createdAt: row.created_at == null ? null : asIsoDate(row.created_at),
   };
 }
 
@@ -31,7 +32,7 @@ export class SupabaseUnitRepository implements UnitRepository {
   async list(query: UnitQuery): Promise<Unit[]> {
     let request = this.client
       .from("pv_product_units")
-      .select("id, legacy_code, short_description, description, is_fractional, is_active")
+      .select("id, legacy_code, short_description, description, is_fractional, is_active, created_at")
       .eq("company_id", this.tenant.companyId);
 
     const term = query.search.trim();

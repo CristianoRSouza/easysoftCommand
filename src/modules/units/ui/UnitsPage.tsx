@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { DEFAULT_UNIT_QUERY, type Unit, type UnitQuery } from "../domain/unit";
 import { useContainer } from "@/shared/container/container-context";
+import { formatDateTime } from "@/shared/ui/format";
 import {
   Badge,
   Empty,
@@ -58,6 +59,7 @@ export function UnitsPage() {
                 <th className="px-4 py-3 text-left font-medium">Descrição</th>
                 <th className="px-4 py-3 text-left font-medium">Fracionada</th>
                 <th className="px-4 py-3 text-left font-medium">Status</th>
+                <th className="px-4 py-3 text-left font-medium">Criada em</th>
               </tr>
             </thead>
             <tbody>
@@ -82,6 +84,9 @@ export function UnitsPage() {
                     <Badge tone={unit.isActive ? "success" : "destructive"}>
                       {unit.isActive ? "Ativa" : "Inativa"}
                     </Badge>
+                  </td>
+                  <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                    {unit.createdAt ? formatDateTime(unit.createdAt) : "—"}
                   </td>
                 </tr>
               ))}
