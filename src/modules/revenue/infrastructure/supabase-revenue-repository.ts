@@ -144,7 +144,7 @@ export class SupabaseRevenueRepository implements RevenueRepository {
     for (const lote of chunks(orderIds, ID_CHUNK)) {
       const { data, error } = await this.client
         .from("vw_command_order_items")
-        .select("order_id, product_name, quantity, subtotal, status")
+        .select("order_id, product_name, quantity, unit_price, subtotal, status")
         .in("order_id", lote);
 
       if (error) throw new Error(`Falha ao ler os itens das comandas: ${error.message}`);
@@ -162,6 +162,7 @@ export class SupabaseRevenueRepository implements RevenueRepository {
           orderId,
           product: asText(row.product_name) ?? "Produto sem nome",
           quantity: asNumber(row.quantity),
+          unitPrice: asNumber(row.unit_price),
           subtotal: asNumber(row.subtotal),
         });
         mapa.set(orderId, lista);

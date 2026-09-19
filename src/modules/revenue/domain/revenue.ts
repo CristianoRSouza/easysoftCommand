@@ -1,4 +1,5 @@
 import type { DateRange } from "@/shared/domain/paging";
+import { truncatedQuantity } from "@/shared/domain/quantity";
 
 /**
  * Receita aprovada do período.
@@ -38,6 +39,7 @@ export interface RevenueOrderItem {
   orderId: string;
   product: string;
   quantity: number;
+  unitPrice: number;
   subtotal: number;
 }
 
@@ -101,6 +103,12 @@ export interface RevenueReport {
   byHour: HourTotal[];
   byTotem: TotemTotal[];
   topProducts: ProductTotal[];
+  /**
+   * Itens do período cuja quantidade a nuvem gravou cortada — peso sem as
+   * casas decimais. Com algum, o ranking por quantidade fica distorcido, e um
+   * produto gravado como 0 nem aparece nele.
+   */
+  truncatedItems: number;
   byMonth: MonthComparison[];
   /** As transações do período, da mais recente para a mais antiga. */
   transactions: RevenueTransaction[];
@@ -267,6 +275,21 @@ function topProductsOf(
     .slice(0, PRODUCT_LIMIT);
 }
 
+/** Itens das transações do período com a quantidade cortada pela nuvem. */
+function truncatedItemsOf(
+  transactions: RevenueTransaction[],
+  itemsByOrder: Map<string, RevenueOrderItem[]>,
+): number {
+  const pedidos = new Set(transactions.flatMap((tx) => tx.orderIds));
+  let total = 0;
+  for (const id of pedidos) {
+    for (const item of itemsByOrder.get(id) ?? []) {
+      if (truncatedQuantity(item) !== null) total += 1;
+    }
+  }
+  return total;
+}
+
 /**
  * Mês a mês, contra os mesmos meses do ano anterior.
  *
@@ -341,6 +364,7 @@ export function buildReport(sources: RevenueSources): RevenueReport {
     byHour: totalsByHour(transactions),
     byTotem: totalsByTotem(transactions, sources.totemByOrder),
     topProducts: topProductsOf(transactions, sources.itemsByOrder),
+    truncatedItems: truncatedItemsOf(transactions, sources.itemsByOrder),
     byMonth: monthsOf(
       sources.range,
       amountByMonth(transactions),

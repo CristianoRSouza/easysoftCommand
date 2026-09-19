@@ -32,11 +32,13 @@ const ALTURA = 260;
 function Bloco({
   title,
   hint,
+  aviso,
   vazio,
   children,
 }: {
   title: string;
   hint?: string;
+  aviso?: string | null;
   vazio: boolean;
   children: React.ReactNode;
 }) {
@@ -46,6 +48,7 @@ function Bloco({
         {title}
       </h2>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+      {aviso && <p className="mt-1 text-xs text-warning">{aviso}</p>}
       <div className="mt-4">
         {vazio ? (
           <Empty label="Sem dados neste intervalo." />
@@ -221,6 +224,11 @@ export default function RevenueCharts({ report }: { report: RevenueReport }) {
       <Bloco
         title="Top 10 produtos"
         hint="Por quantidade vendida"
+        aviso={
+          report.truncatedItems > 0
+            ? `${report.truncatedItems.toLocaleString("pt-BR")} itens vendidos por peso foram gravados na nuvem sem as casas decimais (0,202 kg vira 0). O ranking por quantidade fica distorcido.`
+            : null
+        }
         vazio={report.topProducts.length === 0}
       >
         <BarChart data={report.topProducts} layout="vertical" margin={{ left: 8, right: 16 }}>

@@ -8,12 +8,12 @@ import {
   isCancelled,
   sumApproved,
   sumItems,
-  truncatedQuantity,
   type OrderDetail,
   type OrderItem,
 } from "../domain/order-detail";
 import { paymentMethodLabel, transactionStatusLabel } from "@/modules/transactions/domain/transaction";
 import { useContainer } from "@/shared/container/container-context";
+import { truncatedQuantity } from "@/shared/domain/quantity";
 import { formatCurrency, formatDateTime, formatQuantity } from "@/shared/ui/format";
 import { Badge, Empty, ErrorNotice, Loading } from "@/shared/ui/primitives";
 
