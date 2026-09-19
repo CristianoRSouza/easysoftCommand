@@ -35,6 +35,7 @@ const STATUS_OPTIONS: NfceStatus[] = [
   "rejected",
   "denied",
   "manual_review",
+  "unusable",
   "cancelled",
   "sending",
   "draft",
@@ -72,10 +73,11 @@ export function NfcePage() {
   // a lista inteira e a pessoa teria de refazer o filtro à mão.
   const [parametros] = useSearchParams();
   const [exportadas, setExportadas] = useState(0);
-  const [query, setQuery] = useState<NfceQuery>(() => {
-    const status = parametros.get("status");
-    return status ? { ...DEFAULT_NFCE_QUERY, status: status as NfceStatusFilter } : DEFAULT_NFCE_QUERY;
-  });
+  const [query, setQuery] = useState<NfceQuery>(() => ({
+    ...DEFAULT_NFCE_QUERY,
+    status: (parametros.get("status") as NfceStatusFilter | null) ?? DEFAULT_NFCE_QUERY.status,
+    reconcileFailed: parametros.get("reconciliacao") === "falhou",
+  }));
 
   // Período além do plano não é consultado: o aviso substitui o resultado.
   const foraDoPlano = useOutsidePlanWindow(query.range);
@@ -91,7 +93,7 @@ export function NfcePage() {
   // está na tela e chamar de total do período é um número que parece certo e
   // está errado — foi um bug real no projeto anterior.
   const totais = useQuery<NfceTotals>({
-    queryKey: ["nfce", "totais", query.status, query.range, query.search],
+    queryKey: ["nfce", "totais", query.status, query.reconcileFailed, query.range, query.search],
     queryFn: () => nfce.totals(query),
     enabled: !foraDoPlano,
   });
@@ -203,6 +205,16 @@ export function NfcePage() {
             </option>
           ))}
         </select>
+
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={query.reconcileFailed}
+            onChange={(e) => patch({ reconcileFailed: e.target.checked, page: 1 })}
+            className="accent-primary"
+          />
+          Só reconciliação falhou
+        </label>
 
         <DatePresets range={query.range} onChange={(range) => patch({ range, page: 1 })} />
 

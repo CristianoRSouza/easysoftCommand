@@ -75,7 +75,8 @@ function periodo(query: NfceQuery): string {
 
 export function archiveFileName(query: NfceQuery): string {
   const status = query.status === "all" ? "" : `-${query.status}`;
-  return `nfce-xml-${periodo(query)}${status}.zip`;
+  const reconciliacao = query.reconcileFailed ? "-reconciliacao-falhou" : "";
+  return `nfce-xml-${periodo(query)}${status}${reconciliacao}.zip`;
 }
 
 /**
@@ -93,6 +94,7 @@ export function summaryText(query: NfceQuery, stats: ArchiveStats, now: Date): s
     "Filtros usados",
     `  Período: ${query.range.from ?? "início"} até ${query.range.to ?? "hoje"}`,
     `  Status: ${query.status === "all" ? "todos" : query.status}`,
+    ...(query.reconcileFailed ? ["  Somente reconciliação falhou"] : []),
     `  Busca: ${query.search.trim() || "(nenhuma)"}`,
     "",
     "Conteúdo",

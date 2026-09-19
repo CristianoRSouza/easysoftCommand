@@ -6,6 +6,7 @@ import {
   type DayCount,
   type NfceAttention,
 } from "../domain/dashboard-summary";
+import { onlyReconcileFailed } from "@/modules/nfce/infrastructure/nfce-filters";
 import type { Tenant } from "@/shared/tenant/tenant";
 
 function startOfToday(): string {
@@ -62,10 +63,8 @@ export class SupabaseDashboardRepository implements DashboardRepository {
   /**
    * As três contagens de notas sem solução.
    *
-   * Os filtros são os mesmos do projeto anterior — inclusive o detalhe de que
-   * "reconciliação falhou" só conta nota emitida normalmente (`emission_type`
-   * 1) e ignora cancelada e inutilizada: nota cancelada não tem o que
-   * reconciliar.
+   * Os filtros são os mesmos do projeto anterior. O de "reconciliação falhou"
+   * vem do módulo de NFC-e, o mesmo que a lista usa ao abrir pelo link.
    */
   private async nfceAttention(): Promise<NfceAttention> {
     const notas = () =>
@@ -76,10 +75,7 @@ export class SupabaseDashboardRepository implements DashboardRepository {
 
     const [manual, reconcile, unusable] = await Promise.all([
       notas().eq("status", "manual_review"),
-      notas()
-        .eq("emission_type", 1)
-        .eq("reconcile_status", "failed")
-        .not("status", "in", "(cancelled,inutilized)"),
+      onlyReconcileFailed(notas()),
       notas().eq("status", "unusable"),
     ]);
 

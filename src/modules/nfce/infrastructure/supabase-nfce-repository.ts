@@ -31,6 +31,7 @@ import {
   toTaxReform,
   toTotals,
 } from "./nfce-detail-mapper";
+import { onlyReconcileFailed } from "./nfce-filters";
 
 const COLUMNS =
   "id, number, serie, access_key, status, total_value, issued_at, authorized_at, authorization_protocol, sefaz_status_code, sefaz_status_reason, emission_type, reconcile_status, retry_count";
@@ -71,6 +72,7 @@ export class SupabaseNfceRepository implements NfceRepository {
     let result = request.eq("store_id", this.tenant.storeId) as T;
 
     if (query.status !== "all") result = result.eq("status", query.status) as T;
+    if (query.reconcileFailed) result = onlyReconcileFailed(result);
     if (query.range.from) result = result.gte("issued_at", startOfDayIso(query.range.from)) as T;
     if (query.range.to) result = result.lt("issued_at", startOfNextDayIso(query.range.to)) as T;
 

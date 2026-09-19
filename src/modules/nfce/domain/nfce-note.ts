@@ -97,6 +97,11 @@ export interface NfceQuery {
   /** Chave de acesso, protocolo ou número da nota. */
   search: string;
   status: NfceStatusFilter;
+  /**
+   * Só as notas cuja reconciliação falhou. Não é um status — é uma coluna
+   * própria —, por isso é um filtro à parte e combina com o de status.
+   */
+  reconcileFailed: boolean;
   range: DateRange;
   page: number;
   pageSize: number;
@@ -105,6 +110,7 @@ export interface NfceQuery {
 export const DEFAULT_NFCE_QUERY: NfceQuery = {
   search: "",
   status: "all",
+  reconcileFailed: false,
   range: { from: null, to: null },
   page: 1,
   pageSize: 50,

@@ -18,29 +18,25 @@ import { ErrorNotice, PageHeader, Panel, StatCard } from "@/shared/ui/primitives
 const ATENCAO: {
   key: keyof NfceAttention;
   label: string;
-  status: string | null;
+  link: string;
   hint: string;
 }[] = [
   {
     key: "manualReview",
     label: "Correção manual",
-    status: "manual_review",
+    link: "/nfce?status=manual_review",
     hint: "Rejeitadas pela SEFAZ; a correção é feita na loja",
   },
   {
     key: "reconcileFailed",
     label: "Reconciliação falhou",
-    // A lista de NFC-e filtra por status, e "reconciliação falhou" não é um
-    // status — é uma coluna própria. Sem filtro correspondente, o número
-    // aparece sem virar link: levar para uma lista que mostra outra coisa
-    // seria pior que não levar.
-    status: null,
+    link: "/nfce?reconciliacao=falhou",
     hint: "Emitidas, mas a conferência com a venda não fechou",
   },
   {
     key: "unusable",
     label: "Contingência pendente",
-    status: "unusable",
+    link: "/nfce?status=unusable",
     hint: "Emitidas em contingência e ainda não transmitidas",
   },
 ];
@@ -103,29 +99,19 @@ export function DashboardPage() {
               <div className="mt-4 space-y-3">
                 {ATENCAO.map((item) => {
                   const quantidade = atencao?.[item.key] ?? 0;
-                  const conteudo = (
-                    <>
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => navigate(item.link)}
+                      className="block w-full text-left"
+                      title={`${item.hint} — clique para ver a lista`}
+                    >
                       <span className="flex items-baseline justify-between text-sm">
                         <span>{item.label}</span>
                         <span className="tabular-nums">{quantidade}</span>
                       </span>
                       <Barra valor={quantidade} maximo={total} />
-                    </>
-                  );
-
-                  return item.status ? (
-                    <button
-                      key={item.key}
-                      onClick={() => navigate(`/nfce?status=${item.status}`)}
-                      className="block w-full text-left"
-                      title={`${item.hint} — clique para ver a lista`}
-                    >
-                      {conteudo}
                     </button>
-                  ) : (
-                    <div key={item.key} title={item.hint}>
-                      {conteudo}
-                    </div>
                   );
                 })}
               </div>
