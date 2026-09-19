@@ -140,6 +140,14 @@ export function NfcePage() {
         <ErrorNotice error={exportacao.error} fallback="Não foi possível montar o pacote." />
       )}
 
+      {exportacao.data && exportacao.data.stats.inStorage.length > 0 && (
+        <p className="text-sm text-warning">
+          {exportacao.data.stats.inStorage.length} nota(s) têm o XML guardado no armazenamento de
+          arquivos da nuvem, que este painel não tem permissão de ler — por isso ficaram fora do
+          pacote. Não é falta de documento: é preciso liberar esse acesso no servidor.
+        </p>
+      )}
+
       {exportacao.data && exportacao.data.stats.withoutXml.length > 0 && (
         <p className="text-sm text-warning">
           {exportacao.data.stats.withoutXml.length} nota(s) do filtro não têm XML e ficaram de fora.

@@ -199,5 +199,10 @@ export function toDocuments(row: Row): NfceDocuments {
     generated: asText(row.generated_xml),
     qrcode: asText(row.qrcode),
     queryUrl: asText(row.query_url),
+    storedElsewhere: {
+      authorized: asText(row.storage_authorized_xml_path) !== null,
+      signed: asText(row.storage_signed_xml_path) !== null,
+      cancellation: asText(row.storage_cancellation_xml_path) !== null,
+    },
   };
 }

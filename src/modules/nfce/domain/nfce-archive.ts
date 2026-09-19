@@ -15,6 +15,8 @@ export interface ArchivedNote {
   status: string;
   authorizedXml: string | null;
   cancellationXml: string | null;
+  /** O XML existe, mas no armazenamento de arquivos, que o painel não lê. */
+  storedElsewhere: boolean;
 }
 
 export interface ArchiveStats {
@@ -23,10 +25,15 @@ export interface ArchiveStats {
   cancelled: number;
   /** Notas que entraram no filtro mas não têm XML — ficam listadas no resumo. */
   withoutXml: string[];
+  /**
+   * Notas cujo XML existe, mas no armazenamento de arquivos. Contadas à parte:
+   * misturá-las às sem XML faria o resumo dizer que o documento não existe.
+   */
+  inStorage: string[];
 }
 
 export function emptyStats(): ArchiveStats {
-  return { notes: 0, files: 0, cancelled: 0, withoutXml: [] };
+  return { notes: 0, files: 0, cancelled: 0, withoutXml: [], inStorage: [] };
 }
 
 /**
@@ -93,7 +100,18 @@ export function summaryText(query: NfceQuery, stats: ArchiveStats, now: Date): s
     `  Arquivos XML: ${stats.files}`,
     `  XML de cancelamento: ${stats.cancelled}`,
     `  Notas sem XML: ${stats.withoutXml.length}`,
+    `  Notas com XML no armazenamento (fora deste pacote): ${stats.inStorage.length}`,
   ];
+
+  if (stats.inStorage.length > 0) {
+    linhas.push(
+      "",
+      "Notas com XML no armazenamento de arquivos da nuvem",
+      "  O XML destas notas existe, mas está num armazenamento que o painel não",
+      "  tem permissão de ler. Não é falta de documento.",
+    );
+    for (const nota of stats.inStorage) linhas.push(`  ${nota}`);
+  }
 
   if (stats.withoutXml.length > 0) {
     linhas.push("", "Notas sem XML (não entraram no pacote)");

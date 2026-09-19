@@ -110,6 +110,15 @@ export interface NfceDocuments {
   generated: string | null;
   qrcode: string | null;
   queryUrl: string | null;
+  /**
+   * XMLs que existem, mas foram movidos para o armazenamento de arquivos
+   * (`fiscal-xml`) em vez de ficarem na coluna.
+   *
+   * O armazenamento não libera leitura para o painel — nem para administrador
+   * do sistema, verificado. Dizer "este XML não existe" nesse caso seria
+   * falso: ele existe, e quem procura precisa saber onde está.
+   */
+  storedElsewhere: { authorized: boolean; signed: boolean; cancellation: boolean };
 }
 
 export interface NfceIssuer {

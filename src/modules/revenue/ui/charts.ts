@@ -34,8 +34,18 @@ export const TOOLTIP_STYLE = {
   itemStyle: { color: "hsl(var(--foreground))" },
 } as const;
 
-/** Valores no eixo: milhares abreviados, para o rótulo não virar uma parede. */
+/**
+ * Valores no eixo: milhares abreviados, para o rótulo não virar uma parede.
+ *
+ * Abaixo de dez mil vai uma casa decimal. Arredondar para o milhar inteiro
+ * fazia 1.000 e 1.400 aparecerem os dois como "1 mil" — dois rótulos iguais
+ * em alturas diferentes do mesmo eixo.
+ */
 export function shortCurrency(value: number): string {
-  if (Math.abs(value) >= 1000) return `${Math.round(value / 1000)} mil`;
+  const absoluto = Math.abs(value);
+  if (absoluto >= 10_000) return `${Math.round(value / 1000)} mil`;
+  if (absoluto >= 1000) {
+    return `${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mil`;
+  }
   return value.toLocaleString("pt-BR", { maximumFractionDigits: 0 });
 }

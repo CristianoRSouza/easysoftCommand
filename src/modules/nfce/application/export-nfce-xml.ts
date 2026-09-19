@@ -71,9 +71,9 @@ export function exportNfceXml(repository: NfceRepository) {
           stats.cancelled += 1;
         }
         if (!nota.authorizedXml && !nota.cancellationXml) {
-          stats.withoutXml.push(
-            `${nota.accessKey ?? `nº ${nota.number}/${nota.serie}`} (${nota.status})`,
-          );
+          const rotulo = `${nota.accessKey ?? `nº ${nota.number}/${nota.serie}`} (${nota.status})`;
+          if (nota.storedElsewhere) stats.inStorage.push(rotulo);
+          else stats.withoutXml.push(rotulo);
         }
       }
 

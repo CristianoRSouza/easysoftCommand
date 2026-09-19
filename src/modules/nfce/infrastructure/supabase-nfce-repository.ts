@@ -215,7 +215,9 @@ export class SupabaseNfceRepository implements NfceRepository {
     let request = this.applyFilters(
       this.client
         .from("vw_nfce_notes")
-        .select("id, number, serie, access_key, status, authorized_xml, cancellation_xml"),
+        .select(
+          "id, number, serie, access_key, status, authorized_xml, cancellation_xml, storage_authorized_xml_path, storage_cancellation_xml_path",
+        ),
       query,
     );
     if (afterId) request = request.gt("id", afterId);
@@ -231,6 +233,9 @@ export class SupabaseNfceRepository implements NfceRepository {
       status: asText(row.status) ?? "",
       authorizedXml: asText(row.authorized_xml),
       cancellationXml: asText(row.cancellation_xml),
+      storedElsewhere:
+        asText(row.storage_authorized_xml_path) !== null ||
+        asText(row.storage_cancellation_xml_path) !== null,
     }));
   }
 }
