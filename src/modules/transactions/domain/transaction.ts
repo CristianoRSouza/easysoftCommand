@@ -31,27 +31,39 @@ export function paymentMethodLabel(method: string): string {
   return PAYMENT_LABEL[method] ?? method;
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  approved: "Aprovada",
-  pending: "Pendente",
-  declined: "Negada",
-  cancelled: "Cancelada",
-  refunded: "Estornada",
-  error: "Erro",
-};
+type StatusTone = "success" | "warning" | "info" | "destructive" | "muted";
 
+/**
+ * Os status que a transação assume, com rótulo e cor — os mesmos do projeto
+ * anterior.
+ *
+ * É a fonte única do rótulo, da cor e das opções do filtro. Quando eram três
+ * listas, `processing` e `aborted` ficaram de fora das três: apareciam em
+ * inglês e não podiam ser filtrados, e são justamente os pagamentos que
+ * travaram no meio do caminho.
+ */
+export const TRANSACTION_STATUSES: { value: string; label: string; tone: StatusTone }[] = [
+  { value: "approved", label: "Aprovada", tone: "success" },
+  { value: "pending", label: "Pendente", tone: "warning" },
+  { value: "tef_requested", label: "TEF solicitado", tone: "warning" },
+  { value: "processing", label: "Em processamento", tone: "info" },
+  { value: "declined", label: "Recusada", tone: "muted" },
+  { value: "failed", label: "Falha", tone: "destructive" },
+  { value: "cancelled", label: "Cancelada", tone: "destructive" },
+  { value: "aborted", label: "Abortada", tone: "muted" },
+  { value: "rejected", label: "Rejeitada", tone: "destructive" },
+  { value: "error", label: "Erro", tone: "destructive" },
+];
+
+const POR_VALOR = new Map(TRANSACTION_STATUSES.map((status) => [status.value, status]));
+
+/** Valor fora da lista aparece como veio do banco — esconder seria pior. */
 export function transactionStatusLabel(status: string): string {
-  return STATUS_LABEL[status] ?? status;
+  return POR_VALOR.get(status)?.label ?? status;
 }
 
-/** Como o status deve ser colorido na listagem. */
-export function transactionStatusTone(
-  status: string,
-): "success" | "warning" | "destructive" | "muted" {
-  if (status === "approved") return "success";
-  if (status === "pending") return "warning";
-  if (status === "declined" || status === "error") return "destructive";
-  return "muted";
+export function transactionStatusTone(status: string): StatusTone {
+  return POR_VALOR.get(status)?.tone ?? "muted";
 }
 
 export type TransactionSortKey = "createdAt" | "amount" | "status";

@@ -4,6 +4,7 @@ import { Search } from "lucide-react";
 import {
   DEFAULT_TRANSACTION_QUERY,
   paymentMethodLabel,
+  TRANSACTION_STATUSES,
   transactionStatusLabel,
   transactionStatusTone,
   type Transaction,
@@ -84,10 +85,11 @@ export function TransactionsPage() {
           className={FIELD}
         >
           <option value="">Todos os status</option>
-          <option value="approved">Aprovadas</option>
-          <option value="pending">Pendentes</option>
-          <option value="declined">Negadas</option>
-          <option value="cancelled">Canceladas</option>
+          {TRANSACTION_STATUSES.map((status) => (
+            <option key={status.value} value={status.value}>
+              {status.label}
+            </option>
+          ))}
         </select>
 
         <select

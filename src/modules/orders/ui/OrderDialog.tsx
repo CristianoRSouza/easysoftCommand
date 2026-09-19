@@ -8,7 +8,9 @@ import {
   isCancelled,
   sumApproved,
   sumItems,
+  truncatedQuantity,
   type OrderDetail,
+  type OrderItem,
 } from "../domain/order-detail";
 import { paymentMethodLabel, transactionStatusLabel } from "@/modules/transactions/domain/transaction";
 import { useContainer } from "@/shared/container/container-context";
@@ -21,6 +23,26 @@ const CLOSING_TONE = {
   failing: "destructive",
   open: "muted",
 } as const;
+
+/**
+ * A quantidade gravada, e a que o subtotal indica quando a gravada foi cortada.
+ *
+ * Mostrar só o "0" faria o item parecer lançado por engano; trocar pelo valor
+ * calculado esconderia que o banco guardou outra coisa. As duas aparecem, e a
+ * calculada vem marcada como tal.
+ */
+function Quantidade({ item }: { item: OrderItem }) {
+  const indicada = truncatedQuantity(item);
+  if (indicada === null) return <>{formatQuantity(item.quantity)}</>;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-warning"
+      title={`Gravada como ${formatQuantity(item.quantity)}: a nuvem guarda a quantidade sem casas decimais. O subtotal indica ${formatQuantity(indicada)}.`}
+    >
+      <TriangleAlert size={12} />≈ {formatQuantity(indicada)}
+    </span>
+  );
+}
 
 function Field({ label, value }: { label: string; value: string | null }) {
   return (
@@ -172,7 +194,7 @@ export function OrderDialog({ order, onClose }: { order: Order; onClose: () => v
                             )}
                           </td>
                           <td className="py-2 text-right tabular-nums">
-                            {formatQuantity(item.quantity)}
+                            <Quantidade item={item} />
                           </td>
                           <td className="py-2 text-right tabular-nums">
                             {formatCurrency(item.unitPrice)}
