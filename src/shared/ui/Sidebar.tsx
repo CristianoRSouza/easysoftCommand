@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -17,6 +18,11 @@ import {
   KeyRound,
   Landmark,
   BookOpen,
+  Receipt,
+  Sparkles,
+  Headset,
+  ExternalLink,
+  LoaderCircle,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -25,9 +31,11 @@ import {
   type AccessProfile,
 } from "@/shared/access/access";
 import { useAccess } from "@/shared/access/access-context";
+import { openExternal, type ExternalDestination } from "@/shared/external/external-access";
 
 interface Item {
-  to: string;
+  /** Rota do painel, ou o sistema externo que o item abre em outra aba. */
+  to: string | { external: ExternalDestination };
   label: string;
   icon: LucideIcon;
   /** Quando existe, o item só aparece para quem o perfil permite. */
@@ -71,6 +79,8 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { to: "/agentes", label: "Agentes de Serviço", icon: Cpu },
       { to: "/pixnopdv", label: "PIXnoPDV", icon: QrCode },
       { to: "/auditoria", label: "Auditoria", icon: ScrollText, requires: canViewAuditLogs },
+      { to: { external: "billing" }, label: "Planos", icon: Receipt },
+      { to: { external: "ai-credits" }, label: "Créditos IA", icon: Sparkles },
     ],
   },
   {
@@ -84,12 +94,31 @@ const GROUPS: { title: string; items: Item[] }[] = [
         requires: canIssueBootstrapCodes,
       },
       { to: "/manual", label: "Manual", icon: BookOpen },
+      { to: { external: "support" }, label: "Falar com o suporte", icon: Headset },
     ],
   },
 ];
 
+const ITEM = "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors";
+const ITEM_INATIVO = "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground";
+
 export function Sidebar() {
   const { profile } = useAccess();
+  const [abrindo, setAbrindo] = useState<ExternalDestination | null>(null);
+  const [falha, setFalha] = useState<string | null>(null);
+
+  async function abrir(destino: ExternalDestination) {
+    if (abrindo) return;
+    setAbrindo(destino);
+    setFalha(null);
+    try {
+      await openExternal(destino);
+    } catch (erro) {
+      setFalha(erro instanceof Error ? erro.message : "Não foi possível abrir.");
+    } finally {
+      setAbrindo(null);
+    }
+  }
 
   // Grupo sem item visível não aparece — um título sozinho faria a pessoa
   // procurar o que foi escondido dela.
@@ -114,27 +143,47 @@ export function Sidebar() {
               {group.title}
             </p>
             <ul className="space-y-1">
-              {group.items.map(({ to, label, icon: Icon }) => (
-                <li key={to}>
-                  <NavLink
-                    to={to}
-                    end={to === "/"}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
-                        isActive
-                          ? "bg-sidebar-accent font-medium text-primary"
-                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground"
-                      }`
-                    }
-                  >
-                    <Icon size={18} className="shrink-0" />
-                    {label}
-                  </NavLink>
-                </li>
-              ))}
+              {group.items.map(({ to, label, icon: Icon }) =>
+                typeof to === "string" ? (
+                  <li key={to}>
+                    <NavLink
+                      to={to}
+                      end={to === "/"}
+                      className={({ isActive }) =>
+                        `${ITEM} ${isActive ? "bg-sidebar-accent font-medium text-primary" : ITEM_INATIVO}`
+                      }
+                    >
+                      <Icon size={18} className="shrink-0" />
+                      {label}
+                    </NavLink>
+                  </li>
+                ) : (
+                  <li key={to.external}>
+                    <button
+                      type="button"
+                      onClick={() => void abrir(to.external)}
+                      disabled={abrindo !== null}
+                      className={`${ITEM} ${ITEM_INATIVO} disabled:opacity-60`}
+                    >
+                      {abrindo === to.external ? (
+                        <LoaderCircle size={18} className="shrink-0 animate-spin" />
+                      ) : (
+                        <Icon size={18} className="shrink-0" />
+                      )}
+                      <span className="flex-1 text-left">{label}</span>
+                      <ExternalLink size={13} className="shrink-0 opacity-60" />
+                    </button>
+                  </li>
+                ),
+              )}
             </ul>
           </div>
         ))}
+        {falha && (
+          <p role="alert" className="px-3 text-xs text-destructive">
+            {falha}
+          </p>
+        )}
       </nav>
     </aside>
   );

@@ -1,13 +1,17 @@
 import { Outlet } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, Sparkles } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { useSession } from "@/shared/auth/auth-context";
 import { useTenant } from "@/shared/tenant/tenant-context";
 import { StorePicker } from "@/shared/tenant/StorePicker";
+import { LicenseBanner } from "@/shared/plan/LicenseBanner";
+import { useLicense } from "@/shared/plan/plan-context";
 
 export function AppLayout() {
   const { signOut } = useSession();
   const { tenant, companies, stores } = useTenant();
+  const licenca = useLicense();
+  const demonstracao = licenca.planSlug?.includes("demo") ?? false;
 
   return (
     <div className="flex h-screen">
@@ -29,6 +33,20 @@ export function AppLayout() {
             )
           )}
 
+          {licenca.planName && (
+            <span
+              className={`flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${
+                demonstracao
+                  ? "border-warning/40 bg-warning/10 text-warning"
+                  : "border-border text-muted-foreground"
+              }`}
+              title={demonstracao ? "Licença de demonstração — sem plano contratado" : "Plano contratado"}
+            >
+              {demonstracao && <Sparkles size={11} />}
+              {licenca.planName}
+            </span>
+          )}
+
           <button
             onClick={() => void signOut()}
             title="Sair"
@@ -38,6 +56,8 @@ export function AppLayout() {
             Sair
           </button>
         </header>
+
+        <LicenseBanner />
 
         <main className="min-h-0 flex-1 overflow-auto p-6">
           <Outlet />

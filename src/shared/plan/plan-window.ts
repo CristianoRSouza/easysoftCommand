@@ -1,12 +1,12 @@
 import type { DateRange } from "@/shared/domain/paging";
+import type { LicenseStatus } from "./license";
 
 /**
  * Quanto histórico o plano da empresa permite consultar.
  *
- * Vem de `billing.module_plans.history_window_days`. Hoje só o plano de
- * demonstração tem limite (30 dias) e os pagos são ilimitados — mas o valor é
- * cadastrado no banco, então a regra vale para o que o comercial definir
- * depois, sem mudar código.
+ * Vem de `billing.module_plans.history_window_days`: hoje, 30 dias no Demo,
+ * 90 no Standard, 730 no Pro e 1.825 no Enterprise. O valor é cadastrado no
+ * banco, então a regra acompanha o que o comercial definir, sem mudar código.
  */
 export interface PlanWindow {
   planSlug: string | null;
@@ -72,7 +72,8 @@ export function clampToWindow(
   };
 }
 
-/** Porta de leitura do plano ativo da empresa. */
+/** Porta de leitura do plano e da licença da empresa. */
 export interface PlanWindowResolver {
   resolve(companyId: string): Promise<PlanWindow>;
+  license(companyId: string): Promise<LicenseStatus>;
 }
