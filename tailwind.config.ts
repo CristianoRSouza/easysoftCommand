@@ -77,6 +77,23 @@ export default {
         sans: ["Manrope", "system-ui", "sans-serif"],
         mono: ["ui-monospace", "JetBrains Mono", "monospace"],
       },
+      // As do botão do assistente, idênticas às do projeto anterior.
+      keyframes: {
+        "ai-breathe": {
+          "0%, 100%": { transform: "scale(1)", boxShadow: "0 8px 24px -8px hsl(var(--primary) / 0.45)" },
+          "50%": { transform: "scale(1.04)", boxShadow: "0 12px 32px -6px hsl(var(--primary) / 0.65)" },
+        },
+        "ai-conic-spin": { "0%": { transform: "rotate(0deg)" }, "100%": { transform: "rotate(360deg)" } },
+        "ai-orbit": {
+          "0%": { transform: "rotate(0deg) translateX(22px) rotate(0deg)" },
+          "100%": { transform: "rotate(360deg) translateX(22px) rotate(-360deg)" },
+        },
+      },
+      animation: {
+        "ai-breathe": "ai-breathe 4s ease-in-out infinite",
+        "ai-conic-spin": "ai-conic-spin 6s linear infinite",
+        "ai-orbit": "ai-orbit 5s linear infinite",
+      },
     },
   },
   plugins: [],

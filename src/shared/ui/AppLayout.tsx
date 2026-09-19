@@ -6,6 +6,7 @@ import { useTenant } from "@/shared/tenant/tenant-context";
 import { StorePicker } from "@/shared/tenant/StorePicker";
 import { LicenseBanner } from "@/shared/plan/LicenseBanner";
 import { useLicense } from "@/shared/plan/plan-context";
+import { AssistantButton } from "@/modules/assistant/ui/AssistantButton";
 
 export function AppLayout() {
   const { signOut } = useSession();
@@ -62,6 +63,7 @@ export function AppLayout() {
         <main className="min-h-0 flex-1 overflow-auto p-6">
           <Outlet />
         </main>
+        <AssistantButton />
       </div>
     </div>
   );
