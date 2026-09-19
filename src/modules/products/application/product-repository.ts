@@ -1,4 +1,5 @@
 import type { Page } from "@/shared/domain/paging";
+import type { ProductFiscal } from "../domain/product-fiscal";
 import type { Product, ProductQuery } from "../domain/product";
 
 /**
@@ -10,4 +11,10 @@ import type { Product, ProductQuery } from "../domain/product";
  */
 export interface ProductRepository {
   list(query: ProductQuery): Promise<Page<Product>>;
+
+  /**
+   * A classificação fiscal do produto. `null` quando o cadastro fiscal não
+   * existe para ele — o que é comum em item recém-criado no PDV.
+   */
+  fiscal(productId: string): Promise<ProductFiscal | null>;
 }

@@ -4,6 +4,8 @@ import type { Product, ProductQuery } from "../domain/product";
 import { pageToRange, type Page } from "@/shared/domain/paging";
 import { asIsoDate, asNumber } from "@/shared/infrastructure/convert";
 import type { Tenant } from "@/shared/tenant/tenant";
+import type { ProductFiscal } from "../domain/product-fiscal";
+import { toProductFiscal } from "./product-fiscal-mapper";
 
 /** Colunas de `pv_products`, com a unidade resolvida por relação. */
 const COLUMNS =
@@ -97,5 +99,25 @@ export class SupabaseProductRepository implements ProductRepository {
       items: (data as unknown as Row[] | null)?.map(toProduct) ?? [],
       total: count ?? 0,
     };
+  }
+
+  /**
+   * A classificação fiscal, buscada só quando alguém abre o produto.
+   *
+   * O filtro é por empresa, e não por loja: o cadastro fiscal é da empresa —
+   * o mesmo produto tem a mesma classificação em todas as lojas dela.
+   */
+  async fiscal(productId: string): Promise<ProductFiscal | null> {
+    const { data, error } = await this.client
+      .from("vw_nfce_product_fiscal")
+      .select("*")
+      .eq("company_id", this.tenant.companyId)
+      .eq("product_id", productId)
+      .maybeSingle();
+
+    if (error) throw new Error(`Falha ao carregar os dados fiscais: ${error.message}`);
+    if (!data) return null;
+
+    return toProductFiscal(data as unknown as Record<string, unknown>, productId);
   }
 }

@@ -6,9 +6,10 @@ interface Props {
   items: Product[];
   query: ProductQuery;
   onSort: (key: ProductSortKey) => void;
+  onOpen: (product: Product) => void;
 }
 
-export function ProductTable({ items, query, onSort }: Props) {
+export function ProductTable({ items, query, onSort, onOpen }: Props) {
   if (items.length === 0) {
     return <Empty label="Nenhum produto encontrado com os filtros atuais." />;
   }
@@ -32,7 +33,9 @@ export function ProductTable({ items, query, onSort }: Props) {
           {items.map((product) => (
             <tr
               key={product.id}
-              className="border-t border-border/40 transition-colors hover:bg-secondary/40"
+              onClick={() => onOpen(product)}
+              title="Ver a classificação fiscal"
+              className="cursor-pointer border-t border-border/40 transition-colors hover:bg-secondary/40"
             >
               <td className="px-4 py-3">{product.description || "—"}</td>
               <td className="px-4 py-3 font-mono text-xs text-muted-foreground">
