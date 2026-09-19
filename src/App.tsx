@@ -15,6 +15,7 @@ import { RevenuePage } from "@/modules/revenue/ui/RevenuePage";
 import { AuditPage } from "@/modules/audit/ui/AuditPage";
 import { AgentsPage } from "@/modules/agents/ui/AgentsPage";
 import { PixPage } from "@/modules/pixnopdv/ui/PixPage";
+import { TaxReformPage } from "@/modules/taxreform/ui/TaxReformPage";
 import { CloudQueuePage } from "@/modules/sync/ui/CloudQueuePage";
 import { ManualPage } from "@/pages/ManualPage";
 import { WizardPage } from "@/pages/WizardPage";
@@ -50,6 +51,7 @@ export default function App() {
               <Route path="produtos" element={<ProductsPage />} />
               <Route path="unidades" element={<UnitsPage />} />
               <Route path="emitente" element={<IssuerPage />} />
+              <Route path="reforma-tributaria" element={<TaxReformPage />} />
               <Route path="receitas" element={<RevenuePage />} />
               <Route path="totens" element={<TotemsPage />} />
               <Route path="auditoria" element={<AuditPage />} />

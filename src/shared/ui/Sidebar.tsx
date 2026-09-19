@@ -15,6 +15,7 @@ import {
   CloudUpload,
   Wand2,
   KeyRound,
+  Landmark,
   BookOpen,
   type LucideIcon,
 } from "lucide-react";
@@ -59,6 +60,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { to: "/produtos", label: "Produtos", icon: Package },
       { to: "/unidades", label: "Unidades", icon: Ruler },
       { to: "/emitente", label: "Emitente NFC-e", icon: Building2 },
+      { to: "/reforma-tributaria", label: "Reforma tributária", icon: Landmark },
     ],
   },
   {

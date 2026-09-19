@@ -37,6 +37,9 @@ import { SupabaseAgentRepository } from "@/modules/agents/infrastructure/supabas
 import type { PixRepository } from "@/modules/pixnopdv/application/pix-repository";
 import { SupabasePixRepository } from "@/modules/pixnopdv/infrastructure/supabase-pix-repository";
 
+import type { TaxReformRepository } from "@/modules/taxreform/application/tax-reform-repository";
+import { SupabaseTaxReformRepository } from "@/modules/taxreform/infrastructure/supabase-tax-reform-repository";
+
 import type { UnitRepository } from "@/modules/units/application/unit-repository";
 import { SupabaseUnitRepository } from "@/modules/units/infrastructure/supabase-unit-repository";
 
@@ -54,6 +57,7 @@ export interface Container {
   audit: AuditRepository;
   agents: AgentRepository;
   pix: PixRepository;
+  taxReform: TaxReformRepository;
 }
 
 /**
@@ -89,5 +93,7 @@ export function createContainer(tenant: Tenant | null): Container {
     audit: new SupabaseAuditRepository(supabase, tenant),
     agents: new SupabaseAgentRepository(supabase, tenant),
     pix: new SupabasePixRepository(supabase, tenant),
+    // As tabelas da reforma são iguais para todo mundo: não há tenant a passar.
+    taxReform: new SupabaseTaxReformRepository(supabase),
   };
 }
