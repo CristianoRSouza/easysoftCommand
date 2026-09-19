@@ -9,6 +9,12 @@ import {
   type InboxSummary,
   type SyncQuery,
 } from "../domain/sync-activity";
+import {
+  groupByCategory,
+  parseSyncError,
+  SYNC_ERROR_HINT,
+  SYNC_ERROR_LABEL,
+} from "../domain/sync-error";
 import { useContainer } from "@/shared/container/container-context";
 import { lastPageOf, type Page } from "@/shared/domain/paging";
 import { formatDateTime } from "@/shared/ui/format";
@@ -45,6 +51,34 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "wa
   );
 }
 
+/**
+ * O erro, traduzido — com o texto original a um clique.
+ *
+ * A causa em português resolve a maioria dos casos; a mensagem crua continua
+ * disponível porque é dela que o desenvolvedor precisa quando a categoria não
+ * basta.
+ */
+function ErroDaFila({ erro }: { erro: string | null }) {
+  const analisado = parseSyncError(erro);
+  if (!analisado) return <>—</>;
+
+  const detalhes = [analisado.table, analisado.column, analisado.constraint].filter(Boolean);
+
+  return (
+    <details>
+      <summary className="cursor-pointer text-destructive">
+        {SYNC_ERROR_LABEL[analisado.category]}
+        {detalhes.length > 0 && (
+          <span className="ml-1 font-mono text-muted-foreground">({detalhes.join(" · ")})</span>
+        )}
+      </summary>
+      <p className="mt-1 max-w-xl whitespace-pre-wrap font-mono text-[11px] text-muted-foreground">
+        {analisado.raw}
+      </p>
+    </details>
+  );
+}
+
 export function CloudQueuePage() {
   const { sync } = useContainer();
   const [query, setQuery] = useState<SyncQuery>(DEFAULT_SYNC_QUERY);
@@ -62,6 +96,7 @@ export function CloudQueuePage() {
   });
 
   const patch = (next: Partial<SyncQuery>) => setQuery((c) => ({ ...c, ...next }));
+  const porCategoria = groupByCategory((itens.data?.items ?? []).map((item) => item.lastError));
   const total = itens.data?.total ?? 0;
   const s = resumo.data;
   const atraso = s ? backlogMinutes(s) : null;
@@ -129,6 +164,28 @@ export function CloudQueuePage() {
         />
       </div>
 
+      {/* O erro cru do PostgreSQL é preciso e ilegível. Agrupá-lo por causa
+          responde a pergunta que o operador tem — é dado faltando, duplicado
+          ou permissão? — sem precisar mandar a mensagem para alguém traduzir. */}
+      {porCategoria.length > 0 && (
+        <Panel className="p-5">
+          <h2 className="mb-3 font-heading text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Por que falharam
+          </h2>
+          <ul className="space-y-2">
+            {porCategoria.map((grupo) => (
+              <li key={grupo.category} className="flex flex-wrap items-baseline gap-x-3 text-sm">
+                <span className="font-medium">{SYNC_ERROR_LABEL[grupo.category]}</span>
+                <span className="tabular-nums text-muted-foreground">{grupo.count}</span>
+                <span className="w-full text-xs text-muted-foreground sm:w-auto sm:flex-1">
+                  {SYNC_ERROR_HINT[grupo.category]}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+
       {itens.error && <ErrorNotice error={itens.error} fallback="Não foi possível ler a fila." />}
 
       {itens.isPending ? (
@@ -166,7 +223,7 @@ export function CloudQueuePage() {
                   </td>
                   <td className="px-4 py-3 text-right tabular-nums">{item.retryCount}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">
-                    {item.lastError ?? "—"}
+                    <ErroDaFila erro={item.lastError} />
                   </td>
                 </tr>
               ))}
