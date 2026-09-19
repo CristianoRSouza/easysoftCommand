@@ -14,18 +14,31 @@ export interface AgentUpdate {
   performedBy: string;
 }
 
+/**
+ * O que aconteceu com o registro na trilha.
+ *
+ * A gravação e o registro dela são duas escritas, e o banco aceita a primeira
+ * e recusa a segunda para quem não é administrador. Dizer "não salvou" seria
+ * mentira; ficar calado esconderia que a trilha tem um buraco.
+ */
+export interface SaveOutcome {
+  audited: boolean;
+  auditError: string | null;
+}
+
+export interface CreateOutcome extends SaveOutcome {
+  id: string;
+}
+
 export interface AgentRepository {
   list(): Promise<Agent[]>;
 
-  /**
-   * Grava a alteração e o registro de auditoria **juntos**.
-   *
-   * O projeto anterior fazia as duas coisas em chamadas separadas: se a
-   * segunda falhasse, a configuração mudava sem deixar rastro de quem mudou.
-   * Aqui é uma operação só — ou as duas valem, ou nenhuma.
-   */
-  update(agentId: string, update: AgentUpdate): Promise<void>;
+  /** Grava a alteração e registra na trilha; o resultado diz se a trilha aceitou. */
+  update(agentId: string, update: AgentUpdate): Promise<SaveOutcome>;
+
+  /** Liga ou desliga, sem tocar no resto da configuração. */
+  setActive(agentId: string, isActive: boolean, performedBy: string): Promise<SaveOutcome>;
 
   /** Cria um agente e devolve o identificador gerado. */
-  create(draft: NewAgentDraft, performedBy: string): Promise<string>;
+  create(draft: NewAgentDraft, performedBy: string): Promise<CreateOutcome>;
 }

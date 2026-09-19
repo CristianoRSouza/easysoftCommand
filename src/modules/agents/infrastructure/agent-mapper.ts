@@ -13,6 +13,8 @@ export const AGENT_COLUMNS = [
   "sefaz_timeout_ms, retry_max_attempts, retry_backoff_ms",
   "contingency_enabled, contingency_reason, contingency_auto_transmit",
   "contingency_worker_enabled, contingency_worker_interval_ms",
+  "contingency_substitution_worker_enabled, contingency_substitution_worker_interval_ms",
+  "contingency_substitution_xjust, contingency_sla_warn_hours, contingency_sla_block_hours",
 ].join(", ");
 
 export function toAgent(row: Row): Agent {
@@ -34,6 +36,13 @@ export function toAgent(row: Row): Agent {
       autoTransmit: asBoolean(row.contingency_auto_transmit),
       workerEnabled: asBoolean(row.contingency_worker_enabled),
       workerIntervalMs: optionalNumber(row.contingency_worker_interval_ms),
+      substitutionWorkerEnabled: row.contingency_substitution_worker_enabled === true,
+      substitutionWorkerIntervalMs: optionalNumber(
+        row.contingency_substitution_worker_interval_ms,
+      ),
+      substitutionJustification: asText(row.contingency_substitution_xjust),
+      slaWarnHours: optionalNumber(row.contingency_sla_warn_hours),
+      slaBlockHours: optionalNumber(row.contingency_sla_block_hours),
     },
   };
 }

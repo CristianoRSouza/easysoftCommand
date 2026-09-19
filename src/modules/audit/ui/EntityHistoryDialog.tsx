@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, X } from "lucide-react";
-import type { Totem } from "../domain/totem";
 import {
   ACTION_LABEL,
   DEFAULT_AUDIT_QUERY,
   type AuditEntry,
   type AuditQuery,
-} from "@/modules/audit/domain/audit-entry";
+  type AuditSource,
+} from "../domain/audit-entry";
 import { useContainer } from "@/shared/container/container-context";
 import type { Page } from "@/shared/domain/paging";
 import { formatDateTime } from "@/shared/ui/format";
@@ -21,8 +21,24 @@ const ACTION_TONE = {
   unknown: "muted",
 } as const;
 
-/** O histórico deste totem — a mesma trilha da tela de auditoria, filtrada. */
-export function TotemHistoryDialog({ totem, onClose }: { totem: Totem; onClose: () => void }) {
+/**
+ * O histórico de um equipamento — a mesma trilha da tela de auditoria,
+ * filtrada por ele.
+ *
+ * Vive no módulo de auditoria porque é dele que os dados vêm; totens e
+ * agentes apenas o abrem.
+ */
+export function EntityHistoryDialog({
+  title,
+  source,
+  entityId,
+  onClose,
+}: {
+  title: string;
+  source: AuditSource;
+  entityId: string;
+  onClose: () => void;
+}) {
   const { audit } = useContainer();
 
   useEffect(() => {
@@ -35,13 +51,13 @@ export function TotemHistoryDialog({ totem, onClose }: { totem: Totem; onClose: 
 
   const query: AuditQuery = {
     ...DEFAULT_AUDIT_QUERY,
-    source: "totem",
-    entityId: totem.id,
+    source,
+    entityId,
     pageSize: 100,
   };
 
   const { data, isPending, error } = useQuery<Page<AuditEntry>>({
-    queryKey: ["audit", "totem", totem.id],
+    queryKey: ["audit", source, entityId],
     queryFn: () => audit.list(query),
   });
 
@@ -57,7 +73,7 @@ export function TotemHistoryDialog({ totem, onClose }: { totem: Totem; onClose: 
         <div className="flex items-start justify-between">
           <div>
             <h2 className="font-heading text-lg font-bold">Histórico de alterações</h2>
-            <p className="mt-0.5 text-sm text-muted-foreground">{totem.name || "Sem nome"}</p>
+            <p className="mt-0.5 text-sm text-muted-foreground">{title}</p>
           </div>
           <button
             onClick={onClose}
@@ -73,7 +89,7 @@ export function TotemHistoryDialog({ totem, onClose }: { totem: Totem; onClose: 
         {isPending ? (
           <Loading label="Carregando o histórico..." />
         ) : (data?.items.length ?? 0) === 0 ? (
-          <Empty label="Nenhuma alteração registrada para este totem." />
+          <Empty label="Nenhuma alteração registrada." />
         ) : (
           <ul className="max-h-[60vh] space-y-3 overflow-y-auto">
             {data?.items.map((entry) => (

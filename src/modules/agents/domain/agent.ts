@@ -35,6 +35,19 @@ export interface AgentContingency {
   autoTransmit: boolean;
   workerEnabled: boolean;
   workerIntervalMs: number | null;
+  /** Substituição: troca a nota emitida em contingência por uma normal. */
+  substitutionWorkerEnabled: boolean;
+  substitutionWorkerIntervalMs: number | null;
+  substitutionJustification: string | null;
+  /**
+   * Horas em contingência que disparam aviso e bloqueio.
+   *
+   * Contingência é para atravessar a queda da SEFAZ, não para virar rotina:
+   * o acordo de nível de serviço existe para alguém agir antes de a loja
+   * acumular um dia inteiro de notas não autorizadas.
+   */
+  slaWarnHours: number | null;
+  slaBlockHours: number | null;
 }
 
 export type AgentHealth = "stopped" | "contingency" | "running";
@@ -81,6 +94,11 @@ export interface AgentDraft {
   contingencyAutoTransmit: boolean;
   contingencyWorkerEnabled: boolean;
   contingencyWorkerIntervalMs: number;
+  contingencySubstitutionWorkerEnabled: boolean;
+  contingencySubstitutionWorkerIntervalMs: number;
+  contingencySubstitutionJustification: string;
+  contingencySlaWarnHours: number;
+  contingencySlaBlockHours: number;
 }
 
 export const LOG_LEVELS = ["error", "warn", "info", "debug"] as const;
@@ -98,6 +116,12 @@ export function draftFrom(agent: Agent): AgentDraft {
     contingencyAutoTransmit: agent.contingency.autoTransmit,
     contingencyWorkerEnabled: agent.contingency.workerEnabled,
     contingencyWorkerIntervalMs: agent.contingency.workerIntervalMs ?? 60000,
+    contingencySubstitutionWorkerEnabled: agent.contingency.substitutionWorkerEnabled,
+    contingencySubstitutionWorkerIntervalMs:
+      agent.contingency.substitutionWorkerIntervalMs ?? 300000,
+    contingencySubstitutionJustification: agent.contingency.substitutionJustification ?? "",
+    contingencySlaWarnHours: agent.contingency.slaWarnHours ?? 0,
+    contingencySlaBlockHours: agent.contingency.slaBlockHours ?? 0,
   };
 }
 
@@ -236,6 +260,12 @@ export function emptyAgentDraft(): NewAgentDraft {
     contingencyAutoTransmit: true,
     contingencyWorkerEnabled: true,
     contingencyWorkerIntervalMs: 60000,
+    contingencySubstitutionWorkerEnabled: true,
+    contingencySubstitutionWorkerIntervalMs: 300000,
+    contingencySubstitutionJustification: "",
+    // Zero significa sem acordo definido — é o padrão do projeto anterior.
+    contingencySlaWarnHours: 0,
+    contingencySlaBlockHours: 0,
   };
 }
 

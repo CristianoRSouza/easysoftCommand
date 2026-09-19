@@ -7,7 +7,7 @@ import {
   type Agent,
   type AgentDraft,
 } from "../domain/agent";
-import type { AgentChange, AgentRepository } from "./agent-repository";
+import type { AgentChange, AgentRepository, SaveOutcome } from "./agent-repository";
 
 export interface SaveAgentOptions {
   /** Quem está salvando, para a auditoria. */
@@ -30,7 +30,7 @@ export function saveAgent(repository: AgentRepository) {
     agent: Agent,
     draft: AgentDraft,
     options: SaveAgentOptions,
-  ): Promise<{ changed: boolean }> => {
+  ): Promise<SaveOutcome & { changed: boolean }> => {
     const faltando = missingNumbers(draft);
     if (faltando.length > 0) {
       throw new AgentInvalidValue(
@@ -40,7 +40,7 @@ export function saveAgent(repository: AgentRepository) {
 
     const normalizado = normalizeAgent(draft);
     const campos = changedFields(agent, normalizado);
-    if (campos.length === 0) return { changed: false };
+    if (campos.length === 0) return { changed: false, audited: true, auditError: null };
 
     const anterior = draftFrom(agent);
     const changes: AgentChange[] = campos.map((campo) => ({
@@ -49,11 +49,11 @@ export function saveAgent(repository: AgentRepository) {
       next: normalizado[campo],
     }));
 
-    await repository.update(agent.id, {
+    const resultado = await repository.update(agent.id, {
       draft: normalizado,
       changes,
       performedBy: options.performedBy,
     });
-    return { changed: true };
+    return { changed: true, ...resultado };
   };
 }

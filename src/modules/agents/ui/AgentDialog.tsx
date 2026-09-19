@@ -70,7 +70,16 @@ function Numero({
   );
 }
 
-export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => void }) {
+export function AgentDialog({
+  agent,
+  onClose,
+  onAuditMissing,
+}: {
+  agent: Agent;
+  onClose: () => void;
+  /** Chamado quando a alteração entrou mas a trilha recusou o registro. */
+  onAuditMissing: (motivo: string) => void;
+}) {
   const { agents } = useContainer();
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -92,9 +101,12 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
         // que é o que se sabe com honestidade.
         performedBy: session?.user.email ?? "painel local",
       }),
-    onSuccess: async () => {
+    onSuccess: async (resultado) => {
       await queryClient.invalidateQueries({ queryKey: ["agents"] });
       await queryClient.invalidateQueries({ queryKey: ["audit"] });
+      if (resultado && !resultado.audited && resultado.auditError) {
+        onAuditMissing(resultado.auditError);
+      }
       onClose();
     },
   });
@@ -255,6 +267,70 @@ export function AgentDialog({ agent, onClose }: { agent: Agent; onClose: () => v
                 warning={warningFor(warnings, "contingencyWorkerIntervalMs")}
                 onChange={set("contingencyWorkerIntervalMs")}
               />
+
+              <div className="space-y-3 border-t border-border/60 pt-3">
+                <h4 className="text-sm font-medium">Substituição</h4>
+                <p className="text-xs text-muted-foreground">
+                  Troca a nota emitida em contingência por uma normal, depois que a SEFAZ volta.
+                </p>
+
+                <label className="flex cursor-pointer items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    checked={draft.contingencySubstitutionWorkerEnabled}
+                    onChange={(e) => set("contingencySubstitutionWorkerEnabled")(e.target.checked)}
+                    className="mt-0.5 accent-primary"
+                  />
+                  <span className="text-sm">Worker de substituição ligado</span>
+                </label>
+
+                {draft.contingencySubstitutionWorkerEnabled && (
+                  <>
+                    <Numero
+                      label="Intervalo da substituição (ms)"
+                      value={draft.contingencySubstitutionWorkerIntervalMs}
+                      warning={null}
+                      onChange={set("contingencySubstitutionWorkerIntervalMs")}
+                    />
+                    <label className="block space-y-1.5">
+                      <span className="text-sm text-muted-foreground">
+                        Justificativa da substituição
+                      </span>
+                      <input
+                        value={draft.contingencySubstitutionJustification}
+                        onChange={(e) =>
+                          set("contingencySubstitutionJustification")(e.target.value)
+                        }
+                        placeholder="Texto que acompanha a nota substituta…"
+                        className={`${FIELD} w-full`}
+                      />
+                    </label>
+                  </>
+                )}
+              </div>
+
+              {/* Contingência é para atravessar a queda da SEFAZ, não para virar
+                  rotina: o acordo existe para alguém agir antes de a loja
+                  acumular um dia inteiro de notas não autorizadas. */}
+              <div className="space-y-3 border-t border-border/60 pt-3">
+                <h4 className="text-sm font-medium">Limites de tempo em contingência</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Numero
+                    label="Avisar após (horas)"
+                    hint="Zero desliga o aviso"
+                    value={draft.contingencySlaWarnHours}
+                    warning={null}
+                    onChange={set("contingencySlaWarnHours")}
+                  />
+                  <Numero
+                    label="Bloquear após (horas)"
+                    hint="Zero desliga o bloqueio"
+                    value={draft.contingencySlaBlockHours}
+                    warning={null}
+                    onChange={set("contingencySlaBlockHours")}
+                  />
+                </div>
+              </div>
             </>
           )}
         </div>

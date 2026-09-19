@@ -21,7 +21,14 @@ import { FIELD } from "@/shared/ui/primitives";
  * zero e nenhuma tentativa não funciona, e quem cria raramente sabe quais
  * números usar. Os padrões são os que a operação já usa.
  */
-export function NewAgentDialog({ onClose }: { onClose: () => void }) {
+export function NewAgentDialog({
+  onClose,
+  onAuditMissing,
+}: {
+  onClose: () => void;
+  /** Chamado quando o agente foi criado mas a trilha recusou o registro. */
+  onAuditMissing: (motivo: string) => void;
+}) {
   const { agents } = useContainer();
   const { session } = useSession();
   const queryClient = useQueryClient();
@@ -43,9 +50,12 @@ export function NewAgentDialog({ onClose }: { onClose: () => void }) {
         { ...normalizeAgent(draft), name: draft.name.trim() } as NewAgentDraft,
         session?.user.email ?? "painel local",
       ),
-    onSuccess: async () => {
+    onSuccess: async (resultado) => {
       await queryClient.invalidateQueries({ queryKey: ["agents"] });
       await queryClient.invalidateQueries({ queryKey: ["audit"] });
+      if (resultado && !resultado.audited && resultado.auditError) {
+        onAuditMissing(resultado.auditError);
+      }
       onClose();
     },
   });

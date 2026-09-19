@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CreditCard, History, Pencil, Plus, Power, QrCode, TriangleAlert } from "lucide-react";
 import { TotemDialog } from "./TotemDialog";
-import { TotemHistoryDialog } from "./TotemHistoryDialog";
+import { EntityHistoryDialog } from "@/modules/audit/ui/EntityHistoryDialog";
 import {
   hasAnyPaymentMethod,
   licenseHealth,
@@ -275,7 +275,12 @@ export function TotemsPage() {
       )}
 
       {historico && (
-        <TotemHistoryDialog totem={historico} onClose={() => setHistorico(null)} />
+        <EntityHistoryDialog
+          title={historico.name || "Sem nome"}
+          source="totem"
+          entityId={historico.id}
+          onClose={() => setHistorico(null)}
+        />
       )}
     </div>
   );
