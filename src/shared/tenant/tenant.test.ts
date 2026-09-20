@@ -7,7 +7,7 @@ const empresas = [
 ];
 
 function loja(id: string, isDefault = false): StoreOption {
-  return { id, name: `Loja ${id}`, companyId: "c1", isDefault };
+  return { id, name: `Loja ${id}`, code: id.toUpperCase(), companyId: "c1", isDefault };
 }
 
 const perfil = (system: boolean, company: boolean) => ({
