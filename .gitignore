@@ -4,3 +4,6 @@ electron-release/
 .env
 .env.local
 *.local
+
+# Cache do CLI da Supabase
+supabase/.temp/
