@@ -59,8 +59,11 @@ const POR_TEXTO: [RegExp, SyncErrorCategory][] = [
   [/foreign key/i, "foreign_key"],
   [/duplicate key|unique constraint/i, "unique"],
   [/null value.*not.?null/i, "not_null"],
-  [/relation .* does not exist/i, "undefined_table"],
+  // A coluna vem antes da tabela: a mensagem de coluna inexistente cita a
+  // relação ("column x of relation y does not exist") e, na ordem inversa,
+  // seria lida como tabela faltando — mandando procurar a coisa errada.
   [/column .* does not exist/i, "undefined_column"],
+  [/relation .* does not exist/i, "undefined_table"],
   [/permission denied|\brls\b/i, "permission"],
   [/syntax error/i, "syntax"],
   [/check constraint/i, "check"],

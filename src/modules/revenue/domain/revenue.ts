@@ -161,6 +161,22 @@ function totalsByMethod(transactions: RevenueTransaction[]): MethodTotal[] {
   });
 }
 
+/** O dia seguinte, em `AAAA-MM-DD`, sem depender do fuso. */
+function nextDay(day: string): string {
+  const [ano, mes, dia] = day.split("-").map(Number);
+  const data = new Date(ano ?? 0, (mes ?? 1) - 1, (dia ?? 1) + 1);
+  return localDay(data.toISOString());
+}
+
+/**
+ * Receita por dia, do primeiro ao último dia com venda.
+ *
+ * Os dias parados entram com zero. Sem isso, a linha liga a véspera ao dia
+ * seguinte como se o feriado no meio não tivesse existido — e a queda some do
+ * gráfico. Os dias são preenchidos entre a primeira e a última venda, não pelo
+ * período filtrado: um filtro que vai até o fim do mês não deve desenhar dias
+ * que ainda nem aconteceram.
+ */
 function totalsByDay(transactions: RevenueTransaction[]): DayTotal[] {
   const dias = new Map<string, Record<RevenueMethod, number>>();
   for (const tx of transactions) {
@@ -170,13 +186,20 @@ function totalsByDay(transactions: RevenueTransaction[]): DayTotal[] {
     dias.set(dia, bucket);
   }
 
+  const comVenda = [...dias.keys()].sort();
+  const primeiro = comVenda[0];
+  const ultimo = comVenda[comVenda.length - 1];
+  if (!primeiro || !ultimo) return [];
+
+  const resultado: DayTotal[] = [];
   let acumulado = 0;
-  return [...dias.keys()].sort().map((day) => {
-    const b = dias.get(day)!;
+  for (let day = primeiro; day <= ultimo; day = nextDay(day)) {
+    const b = dias.get(day) ?? zeroByMethod();
     const total = b.credit + b.debit + b.pix;
     acumulado += total;
-    return { day, label: dayLabel(day), ...b, total, cumulative: acumulado };
-  });
+    resultado.push({ day, label: dayLabel(day), ...b, total, cumulative: acumulado });
+  }
+  return resultado;
 }
 
 function totalsByHour(transactions: RevenueTransaction[]): HourTotal[] {

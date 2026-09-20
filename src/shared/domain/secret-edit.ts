@@ -23,10 +23,15 @@ export function isNewValue(edit: SecretEdit): edit is { action: "set"; value: st
 /**
  * Traduz a intenção em valor de coluna. `undefined` significa "não incluir no
  * UPDATE" — é o que preserva o segredo atual sem precisar lê-lo.
+ *
+ * Só apaga quem pediu para apagar. Um valor em branco — inclusive só com
+ * espaços — mantém o que está gravado: o campo da tela promete que campo
+ * vazio não apaga nada, e apagar a chave do TEF por um espaço digitado
+ * pararia os pagamentos da loja.
  */
 export function secretToColumn(edit: SecretEdit): string | null | undefined {
   if (edit.action === "keep") return undefined;
   if (edit.action === "clear") return null;
   const limpo = edit.value.trim();
-  return limpo === "" ? null : limpo;
+  return limpo === "" ? undefined : limpo;
 }
