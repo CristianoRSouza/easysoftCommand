@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert, X } from "lucide-react";
-import { TOTEM_MODE_LABEL, type Totem, type TotemMode } from "../domain/totem";
+import { TOTEM_MODE_LABEL, VOUCHER_KIND_LABEL, type Totem, type TotemMode, type VoucherKind } from "../domain/totem";
 import {
   draftFrom,
   emptyDraft,
@@ -292,8 +292,21 @@ export function TotemDialog({
               <Marcador label="Crédito" checked={draft.creditEnabled} onChange={set("creditEnabled")} />
               <Marcador label="Débito" checked={draft.debitEnabled} onChange={set("debitEnabled")} />
               <Marcador label="PIX" checked={draft.pixEnabled} onChange={set("pixEnabled")} />
+              <Marcador label="Voucher" checked={draft.voucherEnabled} onChange={set("voucherEnabled")} />
             </div>
-            {!draft.creditEnabled && !draft.debitEnabled && !draft.pixEnabled && (
+            {draft.voucherEnabled && (
+              <Escolha<VoucherKind>
+                label="Tipo do voucher na NFC-e"
+                value={draft.voucherKind}
+                onChange={set("voucherKind")}
+                options={(["meal", "food"] as VoucherKind[]).map((valor) => ({
+                  value: valor,
+                  label: VOUCHER_KIND_LABEL[valor],
+                }))}
+                hint="Refeição para restaurantes; Alimentação para mercados"
+              />
+            )}
+            {!draft.creditEnabled && !draft.debitEnabled && !draft.pixEnabled && !draft.voucherEnabled && (
               <p className="text-xs text-warning">
                 Sem nenhum meio habilitado o totem não recebe pagamento algum.
               </p>

@@ -27,7 +27,7 @@ type Row = Record<string, unknown>;
 export const TOTEM_COLUMNS_CLOUD = [
   "id, totem_name, is_active, app_mode, payment_environment",
   "nfce_environment, nfce_serie, nfce_service_url, nfce_emit_timeout_ms",
-  "payment_credit_enabled, payment_debit_enabled, payment_pix_enabled",
+  "payment_credit_enabled, payment_debit_enabled, payment_pix_enabled, payment_voucher_enabled, payment_voucher_kind",
   "tef_http_base_url, pix_http_base_url, establishment_cnpj",
   "nfce_service_api_key, tef_http_api_key, pix_http_api_key",
   "aditum_partner_token_encrypted, aditum_activation_code_encrypted",
@@ -130,6 +130,8 @@ export function toTotem(row: Row, license: TotemLicense | null): Totem {
       credit: asBoolean(row.payment_credit_enabled),
       debit: asBoolean(row.payment_debit_enabled),
       pix: asBoolean(row.payment_pix_enabled),
+      voucher: row.payment_voucher_enabled === true,
+      voucherKind: row.payment_voucher_kind === "food" ? "food" : "meal",
     },
     integrations: {
       nfceServiceApiKey: preenchido(row.nfce_service_api_key),

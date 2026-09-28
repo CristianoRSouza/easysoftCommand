@@ -2,8 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { RevenueRepository } from "../application/revenue-repository";
 import {
   buildReport,
-  isRevenueMethod,
-  REVENUE_METHODS,
+  revenueMethodOf,
   type RevenueOrderItem,
   type RevenueReport,
   type RevenueTransaction,
@@ -84,7 +83,10 @@ export class SupabaseRevenueRepository implements RevenueRepository {
         // Só aprovadas: somar pendentes e negadas infla o faturamento com
         // dinheiro que não entrou.
         .eq("status", "approved")
-        .in("payment_method", [...REVENUE_METHODS]);
+        // `neq cash`, não `in (...)`: payment_method é enum, e um `in` com valor que
+        // ele ainda não tem (meal_voucher antes da migração) derruba a consulta com
+        // 22P02. Quem decide o que entra é `revenueMethodOf`, logo abaixo.
+        .neq("payment_method", "cash");
 
       if (range.from) request = request.gte("created_at", startOfDayIso(range.from));
       if (range.to) request = request.lt("created_at", startOfNextDayIso(range.to));
@@ -97,8 +99,8 @@ export class SupabaseRevenueRepository implements RevenueRepository {
       if (rows.length === 0) break;
 
       for (const row of rows) {
-        const method = asText(row.payment_method) ?? "";
-        if (!isRevenueMethod(method)) continue;
+        const method = revenueMethodOf(asText(row.payment_method) ?? "");
+        if (!method) continue;
         encontradas.push({
           id: asText(row.id) ?? "",
           createdAt: asText(row.created_at) ?? "",

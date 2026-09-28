@@ -75,11 +75,21 @@ export interface TotemPaymentMethods {
   credit: boolean;
   debit: boolean;
   pix: boolean;
+  voucher: boolean;
+  /** meal = Vale Refeição (tPag 11), food = Vale Alimentação (tPag 10). */
+  voucherKind: VoucherKind;
 }
+
+export type VoucherKind = "meal" | "food";
+
+export const VOUCHER_KIND_LABEL: Record<VoucherKind, string> = {
+  meal: "Vale Refeição (tPag 11)",
+  food: "Vale Alimentação (tPag 10)",
+};
 
 /** Nenhum meio ligado significa um totem que não recebe pagamento algum. */
 export function hasAnyPaymentMethod(payments: TotemPaymentMethods): boolean {
-  return payments.credit || payments.debit || payments.pix;
+  return payments.credit || payments.debit || payments.pix || payments.voucher;
 }
 
 /**

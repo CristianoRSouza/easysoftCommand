@@ -64,6 +64,7 @@
     --chart-credit: 210 75% 58%;
     --chart-debit: 155 65% 38%;
     --chart-pix: 38 92% 38%;
+    --chart-voucher: 270 55% 62%;
 
     --border: 218 28% 18%;
     --input: 218 28% 14%;
@@ -137,6 +138,7 @@
     --chart-credit: 210 75% 45%;
     --chart-debit: 155 65% 32%;
     --chart-pix: 38 92% 45%;
+    --chart-voucher: 270 50% 48%;
 
     --border: 214 25% 86%;
     --input: 0 0% 100%;
