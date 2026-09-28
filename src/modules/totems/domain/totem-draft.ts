@@ -1,6 +1,6 @@
 import { KEEP_SECRET, type SecretEdit } from "@/shared/domain/secret-edit";
 import { textOrNull, urlOrNull } from "@/shared/domain/text";
-import type { Totem, TotemLicense, TotemMode } from "./totem";
+import type { Totem, TotemLicense, TotemMode, VoucherKind } from "./totem";
 import {
   IMAGE_SERVER_DEFAULTS,
   PRINTER_DEFAULTS,
@@ -37,6 +37,8 @@ export interface TotemDraft {
   creditEnabled: boolean;
   debitEnabled: boolean;
   pixEnabled: boolean;
+  voucherEnabled: boolean;
+  voucherKind: VoucherKind;
 
   tefHttpBaseUrl: string | null;
   tefHttpApiKey: SecretEdit;
@@ -68,6 +70,8 @@ export function draftFrom(totem: Totem): TotemDraft {
     creditEnabled: totem.payments.credit,
     debitEnabled: totem.payments.debit,
     pixEnabled: totem.payments.pix,
+    voucherEnabled: totem.payments.voucher,
+    voucherKind: totem.payments.voucherKind,
 
     tefHttpBaseUrl: totem.integrations.tefBaseUrl,
     tefHttpApiKey: KEEP_SECRET,
@@ -101,6 +105,9 @@ export function emptyDraft(): TotemDraft {
     creditEnabled: true,
     debitEnabled: true,
     pixEnabled: true,
+    // Forma nova: nasce desligada, ao contrário das outras três.
+    voucherEnabled: false,
+    voucherKind: "meal",
 
     tefHttpBaseUrl: null,
     tefHttpApiKey: KEEP_SECRET,
@@ -229,6 +236,8 @@ export function toColumns(draft: TotemDraft): Record<string, unknown> {
     payment_credit_enabled: draft.creditEnabled,
     payment_debit_enabled: draft.debitEnabled,
     payment_pix_enabled: draft.pixEnabled,
+    payment_voucher_enabled: draft.voucherEnabled,
+    payment_voucher_kind: draft.voucherKind,
 
     tef_http_base_url: urlOrNull(draft.tefHttpBaseUrl),
     pix_http_base_url: urlOrNull(draft.pixHttpBaseUrl),

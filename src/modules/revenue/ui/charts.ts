@@ -10,6 +10,7 @@ export const METHOD_COLOR: Record<RevenueMethod, string> = {
   credit: "hsl(var(--chart-credit))",
   debit: "hsl(var(--chart-debit))",
   pix: "hsl(var(--chart-pix))",
+  voucher: "hsl(var(--chart-voucher))",
 };
 
 /** Série única — sem identidade a distinguir, usa a cor de destaque do painel. */

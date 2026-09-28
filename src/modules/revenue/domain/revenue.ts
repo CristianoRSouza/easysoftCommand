@@ -4,22 +4,34 @@ import { truncatedQuantity } from "@/shared/domain/quantity";
 /**
  * Receita aprovada do período.
  *
- * Conta apenas transações aprovadas nos três meios eletrônicos — crédito,
- * débito e PIX. Dinheiro não passa pelo TEF e por isso não aparece aqui; era
+ * Conta apenas transações aprovadas nos meios eletrônicos — crédito, débito,
+ * PIX e voucher. Dinheiro não passa pelo TEF e por isso não aparece aqui; era
  * assim no projeto anterior, e mudar o critério mudaria todo número que a loja
  * já conhece.
+ *
+ * `voucher` é um GRUPO, não um valor do banco: soma `meal_voucher` (tPag 11) e
+ * `food_voucher` (tPag 10). O tipo fiscal importa para a NFC-e, não para o
+ * faturamento — quem traduz é `revenueMethodOf`.
  *
  * Somar pendentes e negadas infla o faturamento com dinheiro que não entrou —
  * o erro que faz o lojista fechar o mês achando que vendeu mais do que vendeu.
  */
-export const REVENUE_METHODS = ["credit", "debit", "pix"] as const;
+export const REVENUE_METHODS = ["credit", "debit", "pix", "voucher"] as const;
 export type RevenueMethod = (typeof REVENUE_METHODS)[number];
 
 export const METHOD_LABEL: Record<RevenueMethod, string> = {
   credit: "Crédito",
   debit: "Débito",
   pix: "PIX",
+  voucher: "Voucher",
 };
+
+/** Grupo do relatório para um `payment_method` do banco; `null` = fica fora. */
+export function revenueMethodOf(dbValue: string): RevenueMethod | null {
+  if (dbValue === "meal_voucher" || dbValue === "food_voucher") return "voucher";
+  if (dbValue === "credit" || dbValue === "debit" || dbValue === "pix") return dbValue;
+  return null;
+}
 
 export function isRevenueMethod(value: string): value is RevenueMethod {
   return (REVENUE_METHODS as readonly string[]).includes(value);
@@ -60,6 +72,7 @@ export interface DayTotal {
   credit: number;
   debit: number;
   pix: number;
+  voucher: number;
   total: number;
   /** Soma progressiva do período até este dia. */
   cumulative: number;
@@ -71,6 +84,7 @@ export interface HourTotal {
   credit: number;
   debit: number;
   pix: number;
+  voucher: number;
   total: number;
 }
 
@@ -120,7 +134,7 @@ export function averageTicketOf(total: RevenueAmount): number {
 }
 
 function zeroByMethod(): Record<RevenueMethod, number> {
-  return { credit: 0, debit: 0, pix: 0 };
+  return { credit: 0, debit: 0, pix: 0, voucher: 0 };
 }
 
 /** `AAAA-MM-DD` no fuso de quem olha — o dia que o lojista chama de "ontem". */
@@ -153,7 +167,7 @@ function totalsByMethod(transactions: RevenueTransaction[]): MethodTotal[] {
 
   const total = [...somas.values()].reduce((acc, v) => acc + v.amount, 0);
 
-  // A ordem é fixa — crédito, débito, PIX — e não segue o valor: ordenar por
+  // A ordem é fixa — crédito, débito, PIX, voucher — e não segue o valor: ordenar por
   // tamanho faria a cor de cada meio trocar de lugar a cada período.
   return REVENUE_METHODS.map((method) => {
     const soma = somas.get(method)!;
@@ -195,7 +209,7 @@ function totalsByDay(transactions: RevenueTransaction[]): DayTotal[] {
   let acumulado = 0;
   for (let day = primeiro; day <= ultimo; day = nextDay(day)) {
     const b = dias.get(day) ?? zeroByMethod();
-    const total = b.credit + b.debit + b.pix;
+    const total = b.credit + b.debit + b.pix + b.voucher;
     acumulado += total;
     resultado.push({ day, label: dayLabel(day), ...b, total, cumulative: acumulado });
   }
@@ -217,7 +231,7 @@ function totalsByHour(transactions: RevenueTransaction[]): HourTotal[] {
     const slot = horas[h];
     if (!slot) continue;
     slot[tx.method] += tx.amount;
-    slot.total = slot.credit + slot.debit + slot.pix;
+    slot.total = slot.credit + slot.debit + slot.pix + slot.voucher;
   }
 
   return horas;

@@ -3,6 +3,7 @@ import {
   averageTicketOf,
   buildReport,
   isRevenueMethod,
+  revenueMethodOf,
   type RevenueOrderItem,
   type RevenueSources,
   type RevenueTransaction,
@@ -108,5 +109,12 @@ describe("relatório de receitas", () => {
   it("reconhece só os três meios que entram na receita", () => {
     expect(isRevenueMethod("credit")).toBe(true);
     expect(isRevenueMethod("cash")).toBe(false);
+  });
+
+  it("voucher do banco (refeição e alimentação) vira o grupo voucher", () => {
+    expect(revenueMethodOf("meal_voucher")).toBe("voucher");
+    expect(revenueMethodOf("food_voucher")).toBe("voucher");
+    expect(revenueMethodOf("credit")).toBe("credit");
+    expect(revenueMethodOf("cash")).toBeNull();
   });
 });

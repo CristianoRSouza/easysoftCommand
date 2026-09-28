@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreditCard, History, Pencil, Plus, Power, QrCode, TriangleAlert } from "lucide-react";
+import { CreditCard, History, Pencil, Plus, Power, QrCode, Ticket, TriangleAlert } from "lucide-react";
 import { TotemDialog } from "./TotemDialog";
 import { EntityHistoryDialog } from "@/modules/audit/ui/EntityHistoryDialog";
 import {
@@ -150,6 +150,7 @@ function TotemCard({
             <Method enabled={totem.payments.credit} label="Crédito" icon={CreditCard} />
             <Method enabled={totem.payments.debit} label="Débito" icon={CreditCard} />
             <Method enabled={totem.payments.pix} label="PIX" icon={QrCode} />
+            <Method enabled={totem.payments.voucher} label="Voucher" icon={Ticket} />
             {semPagamento && (
               <span className="text-xs text-destructive">nenhum meio habilitado</span>
             )}
